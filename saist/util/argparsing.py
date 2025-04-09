@@ -162,6 +162,16 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--web-port", help = "Port for web server to listen on", required=False, type=int, default = 8080
+    )
+
+parser.add_argument(
+    "--web-host", type=str, help = "Host for the web server to bind to",
+    envvar="SAIST_WEB_HOST", action=EnvDefault, default = "127.0.0.1"
+    )
+
+
+parser.add_argument(
     "--ci", help = "Exit 1 if findings identified", 
     required=False, action='store_true', 
     )

@@ -5,15 +5,17 @@ from models import FindingEnriched  # Update as needed for your project
 import json
 
 class FindingsServer:
-    def __init__(self):
+    def __init__(self, host, port):
         self.app = Flask(__name__)
+        self.host = host
+        self.port = port
         @self.app.route("/")
         def index():
             return render_template_string(self._load_template(), findings=self.findings)
 
     def run(self, enriched_findings: List[FindingEnriched]):
         self.findings = list([dict(x) for x in enriched_findings])
-        self.app.run(port=8080)
+        self.app.run(host=self.host, port=self.port)
 
     def _load_template(self) -> str:
         # Load template.html from the same directory as this file

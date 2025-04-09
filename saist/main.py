@@ -267,7 +267,7 @@ async def main():
                 }
             )
             enriched_findings.append(ef)
-        w = FindingsServer()
+        w = FindingsServer(args.web_host, args.web_port)
         await w.run(enriched_findings)
 
     # 5) Post a single PR review with all combined findings
