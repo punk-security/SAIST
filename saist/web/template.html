@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SAIST - Findings</title>
+
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- AG Grid Stylesheets -->
+    <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-quartz.css">-->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        padding: 0px;
+        margin: 0px;
+        font-family: "Exo 2", sans-serif;
+        font-size: 1rem;
+        text-decoration: none;
+        color: white;
+        background-color: #242930;
+        display: block;
+        scrollbar-color: #c5c6c7 #242930;
+      }
+      /* display: flex;*/
+
+      p {
+        color: #f39b20;
+      }
+
+      .button {
+        padding: 0.5rem 1rem;
+        border: 1px solid;
+        border-color: #c5c6c7;
+        border-radius: 0;
+        color: black;
+        background-color: transparent;
+        transition: all .3s ease-in 0s;
+        display: inline-block;
+        font-size: 0.9rem;
+        font-family: "Exo 2", sans-serif;
+      }
+
+      .button:hover {
+        background-color: #2da84d;
+      }
+
+
+      code {
+        color: white;
+        font-family: monospace;
+        color: black;
+      }
+
+      #body-container {
+        display: flex;
+        flex-direction: column;
+        padding: 80px;
+        max-height: 100%;
+      }
+
+      #header-container {
+        background-color: #1d2024;
+        padding: 20px;
+        margin-bottom: 10px;
+        flex-grow: 7;
+        display: flex;
+        flex-direction: column;
+        border: 2px solid transparent;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        border-image: linear-gradient(to right, red, orange, yellow, green, blue, purple) 1;
+      }
+
+      #header-spacer {
+        flex-grow: 3;
+        display: block;
+      }
+
+      #container {
+        flex-grow: 9.5;
+        max-height: 70vh;
+        min-height: 40vh;
+        display: flex;
+        flex-direction: row;
+      }
+
+      #myGrid {
+        flex-grow: 7;
+        background-color: #1d2024;
+        height: 80vh;
+        width: 100vw;
+        max-width: 100vw;
+        display: block;
+      }
+
+      .spacer {
+        width: 2rem;
+      }
+
+      #filter-panel {
+        flex-grow: 3;
+        display: block;
+        background-color: #1d2024;
+        margin-left: 10px;
+        padding: 15px;
+        max-width: 100%;
+        max-height: 100%;
+        overflow-y: scroll;
+      }
+
+      .snippet-style {
+        color: #f8f8f2;
+        background: #2b2b2b;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        overflow-x: initial;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+        line-height: 1.5rem;
+        max-height: 4rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;  
+      }
+
+      #snippet-model-window {
+        background-color: #242930;
+      }
+
+      code {
+        color: white;
+        font-family: monospace;
+      }
+
+      br {
+        content: "";
+        display: block;
+        height: 5px;
+      }
+
+      .filterlink,
+      .filterlink:active,
+      .filterlink:visited {
+        font-size: 1rem;
+        color: white;
+        text-decoration: underline;
+        font-weight: bold;
+        margin-top: 3px;
+      }
+
+      .activefilterlink {
+        color: royalblue !important;
+      }
+
+      .celllink,
+      .celllink:active,
+      .celllink:visited {
+        color: white;
+        text-decoration: underline;
+      }
+
+    </style>
+
+  </head>
+  <body>
+
+    <div id="body-container">
+      <!-- Findings table -->
+      <div id="header-container">
+        <h1 class="text-3xl font-bold mb-6">SAIST - Findings</h1>
+        <h3>You can save this page locally for later using "Right Click + Save As..."</h3>
+      </div>
+      
+      <div id="container">
+        <div id="myGrid"></div>
+        <!--
+        <div class="spacer"></div>
+
+        <div id="filter-panel">
+          <h3>Filter</h3>
+          <button style="margin: 5px 0 15px 0;" class="button" onclick="ResetFilters()">Clear All
+              Filters</button><br>
+          <div id="filter-panel-content"></div>
+        </div>
+      -->
+      </div>
+      
+    </div>
+
+    <!-- Modal -->
+    <div id="snippetModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+      <div id="snippet-model-window" class="rounded-lg w-full max-w-4xl max-h-[80vh] relative flex flex-col">
+        
+        <!-- Header -->
+        <div class="p-4 border-b border-gray-200 flex justify-between items-start">
+          <h3 class="text-xl font-semibold">File Contents</h3>
+          <button class="text-2xl text-gray-500 hover:text-gray-800" onclick="closeModal()">&times;</button>
+        </div>
+    
+        <!-- Scrollable content area -->
+        <div class="overflow-y-auto p-4 bg-gray-800 text-sm " style="max-height: 60vh;">
+          <pre id="modalContent" class="overflow-x-auto"></pre>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      class CustomTooltip  {
+        init(params) {
+          this.eGui = (this.eGui = document.createElement('div'));
+          const color = '#999';
+
+          this.eGui.classList.add('custom-tooltip');
+          this.eGui.style['background-color'] = grey;
+          this.eGui.innerHTML = `
+              <div><b>Custom Tooltip</b></div>
+              <div>${params.value}</div>
+          `;
+        }
+
+        getGui() {
+          return this.eGui;
+        }
+      }
+
+      enrichedRaw = {{ findings | tojson }}; // Assuming Jinja renders safely
+      x = 0;
+      rowData = enrichedRaw.map(item => ({
+        index: x++,
+        file: item.file,
+        issue: item.issue,
+        snippet: item.snippet,
+        recommendation: item.recommendation,
+        cwe: item.cwe,
+        priority: item.priority,
+        line_number: item.line_number,
+        file_contents: item.file_contents
+      }));
+
+      class SnippetRenderer {
+        init(params) {
+          this.eGui = document.createElement('div');
+          this.eGui.innerHTML = `
+              <div class="snippet-style font-mono text-sm bg-gray-100 border border-gray-300 p-2 rounded cursor-pointer hover:bg-gray-800" onclick="openModal('${params.node.data['index']}')"></div>
+          `
+          this.eGui.querySelector('div').innerText = params.value;
+        }
+
+        getGui() {
+          return this.eGui;
+        }
+
+        refresh(params) {
+          this.eGui = document.createElement('div');
+          this.eGui.innerHTML = `
+              <div class="snippet-style font-mono text-sm bg-gray-100 border border-gray-300 p-2 rounded cursor-pointer hover:bg-gray-800" onclick='openModal('${btoa(params.node.data['file_contents'])}')'></div>
+          `
+          this.eGui.querySelector('div').innerText = params.value;
+        }
+
+        destroy() { }
+      }
+
+      const columnDefs = [
+        { 
+          headerName: "File", 
+          field: "file", 
+          sortable: true, 
+          filter: true,
+          flex: 3
+        },
+        { 
+          headerName: "Line", 
+          field: "line_number", 
+          flex: 1  
+        },
+        { 
+          headerName: "Priority", 
+          field: "priority",
+          width: 100,
+          flex: 1 
+        },
+        { 
+          headerName: "Issue", 
+          field: "issue", 
+          tooltipField: "issue",
+          flex: 2
+        },
+        { 
+          headerName: "Recommendation", 
+          field: "recommendation", 
+          tooltipField: "recommendation",
+          flex: 2 
+        },
+        { 
+          headerName: "CWE", 
+          field: "cwe", 
+          width: 100, 
+          flex: 1 
+        },
+        {
+          headerName: "Snippet",
+          field: "snippet",
+          autoHeight: true,
+          flex: 8,
+          cellStyle: {  },
+          cellRenderer: SnippetRenderer,
+        }
+      ];
+
+      // Set table properties/configurations
+      const gridOptions = {
+        theme: agGrid.themeQuartz
+          .withParams({
+            backgroundColor: "black",
+            foregroundColor: "#FFF",
+            headerTextColor: '#be7b1e',
+            headerFontWeight: 600,
+            browserColorScheme: "dark",
+            headerFontSize: 16,
+            headerBackgroundColor: '#1d2024',
+            headerForegroundColor: '#be7b1e',
+            oddRowBackgroundColor: '#1d2024',
+            rowBorderColor: "transparent",
+            columnBorder: false,
+        }),
+        suppressCellSelection: true,
+        tooltipInteraction: true,
+        columnDefs,
+        rowData,
+        defaultColDef: {
+          
+          resizable: true,
+          sortable: true,
+          filter: false,
+          minWidth: 120,
+          flex: 1
+        },
+        pagination: true,
+        paginationPageSize: 15,
+        animateRows: true,
+        //isExternalFilterPresent: true,
+        //doesExternalFilterPass: "doesExternalFilterPass",
+        tooltipShowDelay: 200,
+        tooltipComponent: CustomTooltip,
+      };
+
+      // Code block dialogue box
+      function openModal(index) {
+        const pre = document.getElementById('modalContent');
+        fileContents = rowData.find(x => x.index == index)['file_contents'];
+        highlightLine = rowData.find(x => x.index == index)['line_number'];
+
+        const lines = fileContents.split('\n');
+
+        const numberedHtml = `<table class="w-full table-fixed">
+            <tbody>
+            ${lines.map((line, idx) => {
+                td = document.createElement("td");
+                td.classList.add("whitespace-pre-wrap", "break-words");
+                td.innerText = line;
+                const lineNumber = idx + 1;
+                const isHighlight = highlightLine === lineNumber;
+                return `
+                <tr id="line-${lineNumber}" class="${isHighlight ? 'bg-green-500' : ''}">
+                    <td class="pr-4 text-right text-gray-500 align-top select-none" width="5%">${lineNumber}</td>
+                    ${td.outerHTML}
+                </tr>
+                `;
+            }).join('')}
+            </tbody>
+        </table>
+        `;
+
+        const contentDiv = document.getElementById('modalContent');
+        contentDiv.innerHTML = numberedHtml;
+
+        document.getElementById('snippetModal').classList.remove('hidden');
+
+        // Scroll to line after rendering
+        if (highlightLine) {
+          setTimeout(() => {
+            const lineElem = document.getElementById(`line-${highlightLine}`);
+            if (lineElem) {
+              lineElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 50);
+        }
+        document.getElementById('snippetModal').classList.remove('hidden');
+      }
+      
+      function closeModal() {
+        document.getElementById('snippetModal').classList.add('hidden');
+      }
+
+      let gridApi;
+
+      function ResetFilters() {
+          gridApi.setFilterModel({});
+          gridApi.onFilterChanged();
+      }
+
+      function setFilterTo(column, value) {
+        let model = gridApi.getFilterModel();
+        model[column] = {
+            filterType: "text",
+            type: "equals",
+            filter: value,
+        };
+        gridApi.setFilterModel(model);
+        gridApi.onFilterChanged();
+      }
+
+      function removeFilterFrom(column) {
+        let model = gridApi.getFilterModel();
+        delete model[column];
+        gridApi.setFilterModel(model);
+        gridApi.onFilterChanged();
+      }
+
+      function populateFilterPanel(){
+        //let model = gridOptions.api.getFilterModel();
+        let filterPanel = document.getElementById("filter-panel-content");
+        filterPanel.innerHTML = '';
+
+        let columns = ["file"];
+
+        for (const columnName of columns) {
+          let model = gridApi.getFilterModel();
+          let column = columnDefs.filter(x => x.field == columnName)[0];
+          if (Object.keys(column).indexOf("filter") != -1) {
+            // Collect the 10 most common values from the table
+            let valueCount = {};
+
+            gridApi.forEachNodeAfterFilter(
+              (row, index) => {
+                if (valueCount[row.data[columnName]] == undefined) {
+                  valueCount[row.data[columnName]] = 1;
+                } else {
+                  valueCount[row.data[columnName]]++;
+                }
+              }
+            );
+
+            // Sort the valueCount by the value
+            let keys = Object.keys(valueCount);
+
+            keys.sort((a, b) => {
+                return valueCount[a] - valueCount[b];
+            });
+            keys.reverse();
+
+            let topTen = []
+            for (let i = 0; i < Math.min(keys.length, 10); i++) {
+                topTen.push({ k: keys[i], v: valueCount[keys[i]] });
+            }
+
+            let header = document.createElement("h3");
+            header.innerHTML = `By ${column['headerName'] ? column['headerName'] : columnName}`;
+            filterPanel.appendChild(header);
+
+            // Always add an "All" option that resets the filter state
+            let item = document.createElement("a");
+            item.setAttribute("class", "filterlink");
+            if (model[columnName] == undefined) {
+                item.classList.add("activefilterlink");
+            }
+            item.setAttribute("href", "#");
+            item.innerHTML = `All`;
+            item.setAttribute("id", `${columnName}All`);
+            item.setAttribute("onclick", `removeFilterFrom("${columnName}")`)
+            filterPanel.appendChild(item)
+            filterPanel.appendChild(document.createElement("br"));
+
+            for (const pair of topTen) {
+                let item = document.createElement("a");
+                item.setAttribute("class", "filterlink");
+                if (model[columnName] && model[columnName].filter == pair['k']) {
+                    item.classList.add("activefilterlink");
+                }
+                item.setAttribute("href", "#");
+                item.innerHTML = `${pair['k']} (${pair['v']})`;
+                item.setAttribute("id", `${columnName}${pair['k']}`);
+                item.setAttribute("onclick", `setFilterTo("${columnName}", "${pair['k']}")`)
+                filterPanel.appendChild(item);
+                filterPanel.appendChild(document.createElement("br"));
+            }
+            filterPanel.appendChild(document.createElement("br"));
+          }
+        }
+      }
+          
+      // Load the table
+      document.addEventListener('DOMContentLoaded', () => {
+        const gridDiv = document.getElementById('myGrid');
+        gridApi = agGrid.createGrid(gridDiv, gridOptions);
+        populateFilterPanel();
+      });
+    
+      // OnClick, open the code block dialogue box 
+      window.onclick = function(event) {
+        const modal = document.getElementById('snippetModal');
+        if (event.target === modal) {
+          closeModal();
+        }
+      };
+    </script>
+  </body>
+</html>

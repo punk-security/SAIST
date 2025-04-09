@@ -1,0 +1,8 @@
+pydantic
+requests
+GitPython
+python-dotenv
+pydantic-ai
+aiofiles
+rich
+flask

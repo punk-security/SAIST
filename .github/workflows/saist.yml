@@ -1,0 +1,37 @@
+name: Security Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  security-check:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write  # So we can post a review
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Security Review
+        # We do NOT need a separate secret for GITHUB_TOKEN; it's provided by GitHub automatically.
+        # We DO need a secret for OPENAI_API_KEY, stored in your repo or org secrets.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}  # The pipeline token
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SAIST_LLM_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          python saist/main.py --llm deepseek github
