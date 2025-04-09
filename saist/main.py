@@ -91,26 +91,22 @@ def _get_scm_adapter(args) -> BaseScmAdapter:
 
 def _get_llm_adapter(args) -> BaseLlmAdapter:
 
-    adapter_args = {}
-
     model = args.llm_model
-    if model is not None:
-        adapter_args["model"] = model.lower()
 
     if args.llm == 'anthropic':
-        llm = AnthropicAdapter(**adapter_args, api_key = args.llm_api_key, model=model)
+        llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: anthropic Model: {llm.model}")
     elif args.llm == 'deepseek':
-        llm = DeepseekAdapter(**adapter_args, api_key = args.llm_api_key, model=model)
+        llm = DeepseekAdapter(api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: deepseek Model: {llm.model}")
     elif args.llm ==  'openai':
-        llm = OpenAiAdapter(**adapter_args, api_key = args.llm_api_key, model=model)
+        llm = OpenAiAdapter(api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: openai Model: {llm.model}")
     elif args.llm ==  'gemini':
-        llm = GeminiAdapter(**adapter_args, api_key = args.llm_api_key, model=model)
+        llm = GeminiAdapter(api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: gemini Model: {llm.model}")
     elif args.llm == 'ollama':
-        llm = OllamaAdapter(**adapter_args, api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
+        llm = OllamaAdapter(api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
         logger.debug(f"Using LLM: ollama Model: {llm.model}")
     else:
         raise Exception("Could not determine a suitable LLM to use")
