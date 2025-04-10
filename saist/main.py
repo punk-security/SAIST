@@ -11,7 +11,7 @@ from llm.adapters.deepseek import DeepseekAdapter
 from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.openai import OpenAiAdapter
 from llm.adapters.ollama import OllamaAdapter
-from models import FindingEnriched, Finding
+from models import FindingEnriched, Finding, Findings
 from llm.adapters.anthropic import AnthropicAdapter
 from web import FindingsServer
 from scm.adapters.filesystem import FilesystemAdapter
@@ -45,7 +45,7 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
         f"\n\nFile: {filename}\n{patch_text}\n"
     )
     try:
-        return await adapter.prompt_structured(prompt, list[Finding], [scm.read_file_contents])
+        return (await adapter.prompt_structured(prompt, Findings, [scm.read_file_contents])).findings
     except Exception as e:
         logger.error(f"[Error] File '{filename}': {e}")
         return None

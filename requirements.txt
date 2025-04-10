@@ -6,3 +6,4 @@ pydantic-ai
 aiofiles
 rich
 flask
+ollama
