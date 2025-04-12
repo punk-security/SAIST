@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class OllamaAdapter(BaseLlmAdapter):
     def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None):
         if model is None:
-            model = "llama3.2"
+            model = "llama3:latest"
         self.model = model
         self.client = ollama.AsyncClient(host=base_url)
 
