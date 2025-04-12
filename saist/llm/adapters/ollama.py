@@ -12,9 +12,22 @@ logger = logging.getLogger(__name__)
 class OllamaAdapter(BaseLlmAdapter):
     def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None):
         if model is None:
-            model = "llama3.2"
+            model = "llama3:latest"
         self.model = model
         self.client = ollama.AsyncClient(host=base_url)
+
+
+    async def initialize(self):
+        if not await self._check_ollama_status():
+            raise ConnectionError("Ollama server unreachable or misconfigured.")
+
+    async def _check_ollama_status(self):
+        try:
+            version_info = await self.client.show(self.model)
+            return bool(version_info)
+        except Exception as e:
+            logger.error("Ollama check failed: %s", e)
+            return False
 
     def get_model_options(self) -> Dict[str, Any]:
         return {'temperature': 0.0}

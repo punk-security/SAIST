@@ -89,7 +89,7 @@ def _get_scm_adapter(args) -> BaseScmAdapter:
 
     raise Exception("Could not determine a suitable file source")
 
-def _get_llm_adapter(args) -> BaseLlmAdapter:
+async def _get_llm_adapter(args) -> BaseLlmAdapter:
 
     model = args.llm_model
 
@@ -107,6 +107,7 @@ def _get_llm_adapter(args) -> BaseLlmAdapter:
         logger.debug(f"Using LLM: gemini Model: {llm.model}")
     elif args.llm == 'ollama':
         llm = OllamaAdapter(api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
+        await llm.initialize()
         logger.debug(f"Using LLM: ollama Model: {llm.model}")
     else:
         raise Exception("Could not determine a suitable LLM to use")
@@ -123,6 +124,7 @@ async def main():
     """
     print_banner()
     args = parse_args()
+
     log_level = logging.WARN
     if args.verbose == 1:
         log_level = logging.INFO
@@ -130,22 +132,32 @@ async def main():
         log_level = logging.DEBUG
     
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level)
-    llm = _get_llm_adapter(args)
+
+    print("🚀 Initializing LLM adapter...")
+    llm = await _get_llm_adapter(args)
+    print(f"✅ Using LLM: {args.llm} (Model: {llm.model})\n")
 
     if args.SCM == "poem":
+        print("📝 Generating poem...\n")
         await poem(llm)
+        print("✨ Poem generation completed.\n")
         exit(0)
 
-    scm = Scm(adapter=_get_scm_adapter(args))
+    print("🔎 Initializing SCM adapter...")
+    scm_adapter = _get_scm_adapter(args)
+    scm = Scm(adapter=scm_adapter)
+    print(f"✅ Using SCM: {args.SCM}\n")
 
     # 1) Get changed files
+    print("📂 Fetching changed files...")
     changed_files = scm.get_changed_files()
-    logger.debug("Changed files", extra={'changed_files': changed_files})
     if not changed_files:
-        logger.warning("No changed files detected.")
+        print("⚠️ No changed files detected. Exiting.")
         return
+    print(f"✅ Detected {len(changed_files)} changed files\n")
 
     # 2) Gather only relevant app code diffs
+    print("🧹 Filtering relevant app code diffs...")
     file_line_maps = {}
     file_new_lines_text = {}
     app_files = []
@@ -153,31 +165,28 @@ async def main():
     for f in changed_files:
         filename = f["filename"]
         patch_text = f.get("patch", "")
-        # Skip if there's no patch content
-        if not patch_text:
-            continue
-        # Skip if the file does not match include / ignore
-        if not should_process(filename):
+        if not patch_text or not should_process(filename):
             continue
 
-        # Parse the diff for mapping
         line_map, new_lines_text = parse_unified_diff(patch_text)
         file_line_maps[filename] = line_map
         file_new_lines_text[filename] = new_lines_text
-
         app_files.append((filename, patch_text))
 
     if not app_files:
-        logger.warning("No app code diffs to analyze.")
+        print("⚠️ No app code diffs to analyze. Exiting.")
         return
+    print(f"✅ Prepared {len(app_files)} app files for analysis.\n")
 
     # 3) Analyze each file in parallel
-    max_workers = min(args.llm_rate_limit, len(app_files))  # Adjust concurrency as needed
+    print("🔍 Analyzing files for security issues...")
+    max_workers = min(args.llm_rate_limit, len(app_files))
     all_findings = await generate_findings(scm, llm, app_files, max_workers)
 
     if not all_findings:
-        logger.info("No findings reported by LLM for any files. Exiting without posting a review.")
+        print("✅ No findings reported. Exiting.\n")
         return
+    print(f"🚨 Analysis complete! Identified {len(all_findings)} potential issues.\n")
 
     # 4) Build review comments from snippet-based findings
     review_comments = []
@@ -242,12 +251,12 @@ async def main():
         print("No issues detected")
         exit(0)
 
-    print(f"\nCompleted analysis - identified {len(all_findings)} issues\n")
-
     if args.interactive:
         s = Shell(llm, scm, all_findings)
         await s.run()
         all_findings = s.findings
+
+
 
     if args.csv:
         write_csv(all_findings, args.csv_path)
@@ -273,7 +282,6 @@ async def main():
         review_comments=review_comments,
         request_changes=True
     )
-
     logger.debug("Review posted with snippet-based security annotations for all analyzed files.")
 
     if args.ci and len(all_findings) > 0:
