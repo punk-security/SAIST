@@ -39,13 +39,13 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
     """
     Analyzes a SINGLE file diff with OpenAI, returning a Findings object or None on error.
     """
-    prompt = prompts.DETECT
+    system_prompt = prompts.DETECT
     logger.debug(f"Processing {filename}")
-    prompt += (
+    prompt = (
         f"\n\nFile: {filename}\n{patch_text}\n"
     )
     try:
-        return (await adapter.prompt_structured(prompt, Findings, [scm.read_file_contents])).findings
+        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [scm.read_file_contents])).findings
     except Exception as e:
         logger.error(f"[Error] File '{filename}': {e}")
         return None
@@ -54,12 +54,12 @@ def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Findi
     """
     Uses OpenAI to generate a summary of all findings to be used as the PR review body.
     """
-    prompt = prompts.SUMMARY
+    system_prompt = prompts.SUMMARY
     for f in findings:
-        prompt += f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
+        prompt = f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
 
     try:
-        return adapter.prompt(prompt)
+        return adapter.prompt(system_prompt, prompt)
     except Exception as e:
         logger.error(f"[Error generating summary] {e}")
         return "Security issues found. Please review the inline comments."
@@ -264,7 +264,7 @@ async def main():
             )
             enriched_findings.append(ef)
         w = FindingsServer(args.web_host, args.web_port)
-        await w.run(enriched_findings)
+        w.run(enriched_findings)
 
     # 5) Post a single PR review with all combined findings
     comment = await generate_summary_from_findings(llm, all_findings)
