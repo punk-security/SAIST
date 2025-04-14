@@ -257,25 +257,6 @@ async def main():
         all_findings = s.findings
 
 
-
-    if args.csv:
-        write_csv(all_findings, args.csv_path)
-
-    if args.web:
-        enriched_findings = []
-        for finding in all_findings:
-            file_contents = await scm.read_file_contents(finding.file)
-            ef = FindingEnriched.model_validate(
-                {
-                    **dict(finding),
-                    "file_contents": file_contents
-                }
-            )
-            enriched_findings.append(ef)
-        w = FindingsServer(args.web_host, args.web_port)
-        w.run(enriched_findings)
-
-    # 5) Post a single PR review with all combined findings
     comment = await generate_summary_from_findings(llm, all_findings)
     scm.create_review(
         comment=comment,
@@ -283,6 +264,31 @@ async def main():
         request_changes=True
     )
     logger.debug("Review posted with snippet-based security annotations for all analyzed files.")
+
+    if args.csv:
+        write_csv(all_findings, args.csv_path)
+
+    if args.web:
+        enriched_findings = []
+        for finding in all_findings:
+            try:
+                file_contents = await scm.read_file_contents(finding.file)
+                ef = FindingEnriched.model_validate(
+                {
+                    **dict(finding),
+                    "file_contents": file_contents
+                }
+                )
+            except Exception as e:
+                ef = FindingEnriched.model_validate(
+                    {
+                    **dict(finding),
+                    "file_contents": "ERR: Could not retrieve contents"
+                }
+                )
+            enriched_findings.append(ef)
+        w = FindingsServer(args.web_host, args.web_port)
+        w.run(enriched_findings)
 
     if args.ci and len(all_findings) > 0:
         exit(1)
