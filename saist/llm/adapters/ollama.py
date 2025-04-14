@@ -19,8 +19,8 @@ class OllamaAdapter(BaseLlmAdapter):
     def get_model_options(self) -> Dict[str, Any]:
         return {'temperature': 0.0}
 
-    async def prompt_structured(self, prompt: str, response_format: Type[BaseModel], tool_fns: Optional[List[Callable]] = None) -> BaseModel:
-        messages = [{"role": "user", "content": prompt}]
+    async def prompt_structured(self, system_prompt: str, user_prompt: str, response_format: Type[BaseModel], tool_fns: Optional[List[Callable]] = None) -> BaseModel:
+        messages = [{"role": "system", "content": system_prompt},{"role": "user", "content": user_prompt}]
 
         response = await self.client.chat(
             model=self.model,
@@ -29,7 +29,7 @@ class OllamaAdapter(BaseLlmAdapter):
             format = response_format.model_json_schema()
         )
 
-        logger.getChild(self.__class__.__name__).debug("prompt_structured initial response", extra={'response_data': response, 'prompt': prompt})
+        logger.getChild(self.__class__.__name__).debug("prompt_structured initial response", extra={'response_data': response, 'prompt': user_prompt})
 
         if response.message and response.message.content:
             parsed = response_format.model_validate_json(response.message.content)
@@ -37,8 +37,8 @@ class OllamaAdapter(BaseLlmAdapter):
         else:
             raise ValueError("No structured response received from model")
 
-    async def prompt(self, prompt: str, tool_fns: Optional[List[Callable]] = None) -> str | None:
-        messages = [{"role": "user", "content": prompt}]
+    async def prompt(self, system_prompt: str, user_prompt: str, tool_fns: Optional[List[Callable]] = None) -> str | None:
+        messages = [{"role": "system", "content": system_prompt},{"role": "user", "content": user_prompt}]
 
         response = await self.client.chat(
             model=self.model,
@@ -46,7 +46,7 @@ class OllamaAdapter(BaseLlmAdapter):
             options=self.get_model_options(),
         )
 
-        logger.getChild(self.__class__.__name__).info("prompt initial response", extra={'response_data': response, 'prompt': prompt})
+        logger.getChild(self.__class__.__name__).info("prompt initial response", extra={'response_data': response, 'prompt': user_prompt})
 
         return response.message.content if response.message else None
 
