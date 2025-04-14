@@ -27,7 +27,7 @@ We support OLLAMA for local / offline code scanning.
 
 - **AI-powered vulnerability scanning** for entire codebases
 - **Diff scanning**: Git commits, branches, or PRs
-- **Multi-LLM support**: `OpenAI`, `Anthropic`, `DeepSeek`, `Gemini`, `Ollama`
+- **Multi-LLM support**: `OpenAI`, `Anthropic`, `Bedrock`, `DeepSeek`, `Gemini`, `Ollama`
 - **Filesystem, Git, GitHub PR scanning modes**
 - **Pattern-based file inclusion/exclusion** using `.saist.include` and `.saist.ignore`
 - **Interactive chat** with your findings
