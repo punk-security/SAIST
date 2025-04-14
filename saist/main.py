@@ -13,6 +13,7 @@ from llm.adapters.openai import OpenAiAdapter
 from llm.adapters.ollama import OllamaAdapter
 from models import FindingEnriched, Finding, Findings
 from llm.adapters.anthropic import AnthropicAdapter
+from llm.adapters.bedrock import BedrockAdapter
 from web import FindingsServer
 from scm.adapters.filesystem import FilesystemAdapter
 from scm import BaseScmAdapter
@@ -96,6 +97,9 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
     if args.llm == 'anthropic':
         llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: anthropic Model: {llm.model}")
+    if args.llm == 'bedrock':
+        llm = BedrockAdapter( api_key = args.llm_api_key, model=model)
+        logger.debug(f"Using LLM: AWS bedrock Model: {llm.model}")
     elif args.llm == 'deepseek':
         llm = DeepseekAdapter(api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: deepseek Model: {llm.model}")
