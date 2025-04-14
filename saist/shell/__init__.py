@@ -59,7 +59,11 @@ class Shell():
                                         live.update(Markdown(message))
                     self.new_messages = agent_run.result.all_messages()
         
-    async def stop(self):
+    async def stop(self) -> None:
+        """
+        Closes the session for the user, they could call exit or goodbye etc
+
+        """
         logger.info("LLM wants to stop")
         self.should_stop = True
 
@@ -74,37 +78,37 @@ class Shell():
         self.console.print(t)
 
     async def get_findings(self) -> list[Finding]:
-        logger.info("LLM retrieving findings")
         """
         Asynchronously fetch all findings
 
         Returns:
         Findings: The full list of current findings
         """
+        logger.info("LLM retrieving findings")
         return self.findings
 
     
     async def update_findings(self, findings: list[Finding]):
-        logger.info("LLM updating findings")
         """
         Asynchronously replaces all the current findins
 
         Parameters:
         Findings: The full list of current findings
         """
+        logger.info("LLM updating findings")
         self.findings = findings
 
     async def reset_findings(self):
-        logger.info("LLM resetting findings")
         """
         Reset findings back to how they were originally
         """
+        logger.info("LLM resetting findings")
         self.findings = self.original_findings
 
     async def reset_chat(self):
-        logger.info("LLM cleared context window")
         """
         Reset the chat context
 
         """
+        logger.info("LLM cleared context window")
         self.new_messages = []
