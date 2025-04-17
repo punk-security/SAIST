@@ -28,14 +28,14 @@ class FilesystemAdapter(BaseScmAdapter):
 
             return contents
         except Exception as e:
-            logging.warn(f"ERR: {e}")
+            logging.warning(f"ERR: {e}")
 
     def __init__(self, compare_path: PathLike[AnyStr] | str, base_path: Optional[PathLike[AnyStr] | str] = None):
         self.base_path = base_path
         self.compare_path = compare_path
 
     def create_review(self, comment, review_comments, request_changes):
-        write_findings(comment,review_comments,request_changes)
+        write_findings(comment, review_comments, request_changes)
 
     def get_changed_files(self) -> list[File]:
         return list(self._iter_changed_files())
@@ -44,22 +44,26 @@ class FilesystemAdapter(BaseScmAdapter):
         logger.debug(f"Iterate changed files: base:{self.base_path}, compare:{self.compare_path}")
 
         if self.base_path is None:
-            diffs = [path.replace("\\","/") for path in glob.glob("**/*", root_dir=self.compare_path, recursive=True,)]
-            logger.debug("Changed file paths", extra={"paths": list(diffs)})
+            files = [path.replace("\\","/") for path in glob.glob("**/*", root_dir=self.compare_path, recursive=True)]
+            logger.debug("Returning all file paths as changed files", extra={"paths": list(files)})
 
-            for filename in [path for path in diffs if os.path.isfile(f"{self.compare_path}/{path}")]:
-                a_path = f"{self.compare_path}/{filename}"
+            for filename in files:
+                full_path = os.path.join(self.compare_path, filename)
+
+                if not os.path.isfile(full_path):
+                    continue
 
                 try:
-                    with open(a_path) as a:
-                        patch = "".join(difflib.unified_diff([], a.readlines(), fromfile="", tofile=f""))
+                    with open(full_path, 'r', encoding='utf-8') as f:
+                        file_contents = f.readlines()
 
-                        yield File(filename=filename, patch=patch)
+                    patch = "".join(difflib.unified_diff([], file_contents, fromfile="", tofile=filename))
+
+                    yield File(filename=filename, patch=patch)
                 except UnicodeDecodeError:
-                    # Binary file - ignore
-                    logger.debug(f"File is not valid UTF-8, skipping: {a_path}")
+                    logger.debug(f"Skipping non-text file: {full_path}")
 
-            return None
+            return
 
         diffs = dircmp(self.base_path, self.compare_path)
 
@@ -69,11 +73,10 @@ class FilesystemAdapter(BaseScmAdapter):
 
             try:
                 with open(a_path, "r") as a, open(b_path, "r") as b:
-                    patch = "".join(difflib.unified_diff(a.readlines(), b.readlines(), fromfile="", tofile=""))
+                    patch = "".join(difflib.unified_diff(a.readlines(), b.readlines(), fromfile=a_path, tofile=b_path))
 
                     yield File(filename=filename, patch=patch)
             except UnicodeDecodeError:
-                # Binary file - ignore
                 logger.warning(f"File is not valid UTF-8, skipping: {a_path}, {b_path}")
 
     @staticmethod
