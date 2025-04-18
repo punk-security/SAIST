@@ -120,7 +120,7 @@ github_parser.add_argument(
 parser.add_argument(
     "--llm",
     type=str,
-    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai"],
+    choices=["anthropic","azureopenai", "bedrock", "deepseek", "gemini", "ollama", "openai"],
     required=True,
     action=EnvDefault,
     envvar="SAIST_LLM"
@@ -201,10 +201,13 @@ def parse_args():
     if args.llm == "bedrock" and args.llm_api_key:
         parser.error(f"Do not provide an API key for bedrock, use AWS ENV variables https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html")
 
+    if args.llm == "azureopenai" and args.llm_api_key:
+        parser.error(f"Do not provide an API key for bedrock, use AWS ENV variables https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html")
+
     if args.llm == "bedrock" and args.interactive:
         parser.error("Sorry, we dont support interactive mode with bedrock as AWS tool calling is a bit broken")
 
-    if args.llm not in [ "ollama", "bedrock" ] and args.llm_api_key is None:
+    if args.llm not in [ "ollama", "bedrock", "azureopenai" ] and args.llm_api_key is None:
         parser.error(f"You must provide an api key with --llm-api-key if using {args.llm}")
 
     if args.llm == "ollama" and args.interactive:
