@@ -202,7 +202,7 @@ def parse_args():
         parser.error(f"Do not provide an API key for bedrock, use AWS ENV variables https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html")
 
     if args.llm == "azureopenai" and args.llm_api_key:
-        parser.error(f"Do not provide an API key for bedrock, use AWS ENV variables https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html")
+        parser.error(f"Do not provide an API key for bedrock, use ENV variables")
 
     if args.llm == "bedrock" and args.interactive:
         parser.error("Sorry, we dont support interactive mode with bedrock as AWS tool calling is a bit broken")
