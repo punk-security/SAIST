@@ -171,6 +171,7 @@ If multiple keys are defined, `PRE` and `POST` will wrap around the override tex
 
 ### 📝 `saist.rules.example`
 
+
 ```yaml
 # Example prompt modification
 
@@ -180,6 +181,7 @@ PROMPT_OVERRIDE: "Identify any potential vulnerabilites in the following code. F
 # Use these to prepend or append context to the prompt
 PROMPT_PRE: "You are reviewing critical code. Please be strict.\n\n"
 PROMPT_POST: "\n\nPlease provide practical advice."
+```
 
 ---
 
