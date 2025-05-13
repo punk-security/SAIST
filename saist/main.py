@@ -42,7 +42,7 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
     """
     Analyzes a SINGLE file diff with OpenAI, returning a Findings object or None on error.
     """
-    system_prompt = PromptRules.apply_rules(prompts.DETECT)
+    system_prompt = PromptRules.apply_rules(prompts.DETECT_PRE, prompts.DETECT_POST)
     logger.debug(f"Processing {filename}")
     prompt =(
         f"\n\nFile: {filename}\n{patch_text}\n"

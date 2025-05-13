@@ -8,13 +8,16 @@ class PromptRules:
     RulesFile = "saist.rules"
 
     @staticmethod
-    def apply_rules(prompt):
+    def apply_rules(pre_prompt: str, post_prompt: str = "") -> str:
         rules = PromptRules.load_rules()
     
-        override = rules.get("PROMPT_OVERRIDE", prompt)
+        override = rules.get("PROMPT_OVERRIDE")
         pre = rules.get("PROMPT_PRE", "")
         post = rules.get("PROMPT_POST", "")
-        return f"{pre}{override}{post}"
+
+        final_prompt = override if override else (pre_prompt + post_prompt) #if override isn't specified, this should just use the prefix and suffix with the orig prompt
+        return f"{pre}{final_prompt}{post}"
+
 
     @staticmethod
     def load_rules():
