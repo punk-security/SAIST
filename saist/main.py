@@ -20,7 +20,7 @@ from scm import BaseScmAdapter
 from scm.adapters.git import GitAdapter
 from util.git import parse_unified_diff
 from util.filtering import should_process
-from util.prompts import prompts
+from util import prompts
 from scm.adapters.github import Github
 from scm import Scm
 from shell import Shell
@@ -31,7 +31,6 @@ from util.poem import poem
 
 from util.output import print_banner, write_csv
 
-prompts = prompts()
 load_dotenv(".env")
 
 logger = logging.getLogger("saist")
@@ -40,22 +39,24 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
     """
     Analyzes a SINGLE file diff with OpenAI, returning a Findings object or None on error.
     """
-    system_prompt = prompts.DETECT
     logger.debug(f"Processing {filename}")
     prompt = (
         f"\n\nFile: {filename}\n{patch_text}\n"
     )
-    try:
-        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [scm.read_file_contents])).findings
-    except Exception as e:
-        logger.error(f"[Error] File '{filename}': {e}")
-        return None
+    findings = []
+    for analyst in prompts.analysts.keys():
+        system_prompt = prompts.analysts[analyst].PROMPT
+        try:
+            findings += (await adapter.prompt_structured(system_prompt, prompt, Findings, [scm.read_file_contents])).findings
+        except Exception as e:
+            logger.error(f"[Error] File '{filename}': {e}")
+    return findings
 
 def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Finding]) -> str:
     """
     Uses OpenAI to generate a summary of all findings to be used as the PR review body.
     """
-    system_prompt = prompts.SUMMARY
+    system_prompt = prompts.summary_writer.PROMPT
     for f in findings:
         prompt = f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
 
@@ -212,8 +213,16 @@ async def main():
 
         # Basic checks
         if not file_name or not snippet or not issue:
+            logging.debug("validation error for item")
+            item.line_number = -1
+            continue
+        if "\n" in snippet:
+            logging.debug("Code snippet contains multiple lines")
+            item.line_number = -1
             continue
         if file_name not in file_line_maps:
+            logging.debug(f"{file_name} does not exist...")
+            item.line_number = -1
             # Possibly flagged a file that doesn't exist in the PR
             continue
 
@@ -228,6 +237,7 @@ async def main():
                 break
 
         if not matched_new_line:
+            logging.debug(f"Line '{snippet}' does not exist...")
             # If we can't find the snippet in the patch, skip
             item.line_number = -1
             continue
@@ -252,8 +262,29 @@ async def main():
     all_findings = list([x for x in all_findings if x.line_number != -1])
 
     if not all_findings:
-        print("No issues detected")
+        print("Followig validation, no valid issues detected")
         exit(0)
+    
+    print(f"✨ Validation complete! Identified {len(all_findings)} issues.\n")
+
+    # Deduplicate all_findings based on (file, line_number, cwe)
+
+    seen = set()
+    deduped_findings = []
+
+    for finding in all_findings:
+        if finding.cwe == "N/A":
+            deduped_findings.append(finding)
+            continue
+        key = (finding.file, finding.line_number, finding.cwe)
+        if key not in seen:
+            seen.add(key)
+            deduped_findings.append(finding)
+
+    all_findings = deduped_findings
+
+    print(f"🚀 Deduplication complete! Identified {len(all_findings)} issues.\n")
+
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)
