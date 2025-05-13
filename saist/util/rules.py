@@ -2,7 +2,7 @@ import os
 import yaml
 import logging
 
-logger = logging.getLogger("saist")
+logger = logging.getLogger(__name__) 
 
 class PromptRules:
     RulesFile = "saist.rules"
@@ -32,7 +32,7 @@ class PromptRules:
                 logger.debug(f"Loaded prompt rules: {', '.join(keys)}")
             else:
                 logger.debug("No valid keys found.")
-                
+
                 return rules if rules is not None else {}
         except Exception as ex:
             logger.error(f"Error reading saist.rules: {ex}")
