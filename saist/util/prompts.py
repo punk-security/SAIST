@@ -1,3 +1,6 @@
+import os
+import yaml
+
 class personality():
     def __init__(self, prompt_body, prompt_suffix = None, priority = None):
         self.prompt_body = prompt_body
@@ -12,73 +15,6 @@ class personality():
 
 FILE_ANALYSIS_COMMON_SUFFIX = "Below is the diff for this single file. It starts with 'File: <filename>' followed by the unified diff.\n"
 
-security_analyst = personality(
-    prompt_body = """
-    You are a security reviewer analyzing a single file's diff from a Pull Request. 
-    Only identify confirmed, high-confidence vulnerabilities introduced or modified in the diff.
-
-    # Strict rules:
-
-    Do not report vague or speculative issues like "potential path traversal" or "hardcoded secrets" unless they are clearly 
-    exploitable and directly related to the categories above.
-
-    Do not report issues based only on pattern-matching or tool output—require code context and confirmation.
-    Retrieve the full file and other relevant files for context only after a suspicious change is detected in the diff.
-
-    A severity rating from 1 to 9 (9 is most critical)
-    Only report confirmed, context-aware vulnerabilities within the scope defined above
-
-    """,
-    prompt_suffix = """
-    Set the CWE to CWE-XXX where XXX is the numerical ID
-    Set the Category to Security
-    """ + FILE_ANALYSIS_COMMON_SUFFIX
-)
-
-codequality_analyst = personality(
-    prompt_body= """
-    You are a code reviewer analyzing a single file's diff from a Pull Request. 
-    Your task is to identify bad development patterns introduced or modified in the diff.
-    Focus only on poor coding practices that may lead to long-term maintainability, reliability, or readability issues. 
-    Do not report security vulnerabilities or speculative risks.
-
-    Rules:
-    Only analyze changes in the diff. Ignore unchanged code or tool-generated output.
-    Retrieve the full file or other files for context only if needed to confirm the presence of a bad pattern.
-    Do not flag stylistic or formatting issues unless they reflect a deeper anti-pattern.
-    Examples of bad development patterns include:
-    Copy-pasted logic instead of reusable code
-    Excessive code nesting or deeply nested conditionals
-    Catch-all exception handling (e.g., catch(Exception) without handling)
-    Business logic in controllers or views
-    Logic dependent on hardcoded values where abstraction is expected
-    Functions or classes that are too long or do too much
-    Use of magic numbers or unclear naming
-
-    Only report confirmed, code-level development anti-patterns present in the diff.
-    """,
-    prompt_suffix = """
-    Set the CWE to N/A
-    Set the Category to BAD PATTERN
-    """ + FILE_ANALYSIS_COMMON_SUFFIX,
-    priority = 3
-)
-
-typo_analyst = personality(
-    prompt_body= """
-    You are a code reviewer analyzing a single file's diff from a Pull Request. 
-    Your task is to identify typos
-
-    Only report on typos. Return nothing if no typos found
-    """,
-    prompt_suffix = """
-    Set the CWE to N/A
-    Set the Category to typo
-    """ + FILE_ANALYSIS_COMMON_SUFFIX,
-    priority = 5
-)
-
-
 summary_writer = personality(
     prompt_body = """
     You are a senior application security engineer.
@@ -91,8 +27,35 @@ summary_writer = personality(
     prompt_suffix = "findings:" 
 )
 
+def load_personalities(file_path='saist.personalities'):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File '{file_path}' not found.")
+
+    with open(file_path, 'r') as file:
+        try:
+            personalities = yaml.safe_load(file)
+            if not isinstance(personalities, dict):
+                raise ValueError("YAML content is not a dictionary.")
+
+            for item_name, item_data in personalities.items():
+                if not isinstance(item_data, dict):
+                    raise ValueError(f"Item '{item_name}' must be a dictionary.")
+                if 'priority' not in item_data:
+                    raise ValueError(f"Item '{item_name}' is missing required field: 'priority'")
+                if 'prompt' not in item_data:
+                    raise ValueError(f"Item '{item_name}' is missing required field: 'prompt'")
+
+            return personalities
+
+        except yaml.YAMLError as e:
+            raise ValueError(f"Error parsing YAML file: {e}")
+
+personalities_dict = load_personalities()
+
 analysts = {
-    "security": security_analyst,
-    "codequality": codequality_analyst,
-    "typo": typo_analyst
+    name: personality(
+        data["prompt"], 
+        f"Set the Category to {name}. Set CWE to the format CWE-XXX or N/A if a CWE is not relevant" + 
+        FILE_ANALYSIS_COMMON_SUFFIX, priority=data["priority"]) 
+        for name, data in personalities_dict.items()
 }
