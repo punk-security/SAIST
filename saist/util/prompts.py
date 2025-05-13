@@ -61,8 +61,23 @@ codequality_analyst = personality(
     Set the CWE to N/A
     Set the Category to BAD PATTERN
     """ + FILE_ANALYSIS_COMMON_SUFFIX,
+    priority = 3
+)
+
+typo_analyst = personality(
+    prompt_body= """
+    You are a code reviewer analyzing a single file's diff from a Pull Request. 
+    Your task is to identify typos
+
+    Only report on typos. Return nothing if no typos found
+    """,
+    prompt_suffix = """
+    Set the CWE to N/A
+    Set the Category to typo
+    """ + FILE_ANALYSIS_COMMON_SUFFIX,
     priority = 5
 )
+
 
 summary_writer = personality(
     prompt_body = """
@@ -78,5 +93,6 @@ summary_writer = personality(
 
 analysts = {
     "security": security_analyst,
-    "codequality": codequality_analyst
+    "codequality": codequality_analyst,
+    "typo": typo_analyst
 }

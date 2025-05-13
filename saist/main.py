@@ -273,7 +273,7 @@ async def main():
     deduped_findings = []
 
     for finding in all_findings:
-        if finding.cwe == "BAD PATTERN":
+        if finding.cwe == "N/A":
             deduped_findings.append(finding)
             continue
         key = (finding.file, finding.line_number, finding.cwe)
