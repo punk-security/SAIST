@@ -31,6 +31,8 @@ from util.poem import poem
 
 from util.output import print_banner, write_csv
 
+from util.rules import PromptRules
+
 prompts = prompts()
 load_dotenv(".env")
 
@@ -42,9 +44,9 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
     """
     system_prompt = prompts.DETECT
     logger.debug(f"Processing {filename}")
-    prompt = (
+    prompt = PromptRules.apply_rules(
         f"\n\nFile: {filename}\n{patch_text}\n"
-    )
+        )
     try:
         return (await adapter.prompt_structured(system_prompt, prompt, Findings, [scm.read_file_contents])).findings
     except Exception as e:
