@@ -1,0 +1,8 @@
+# Example prompt modification
+
+# Use this to completely override the system prompt:
+# PROMPT_OVERRIDE: "Identify any potential vulnerabilites in the following code. Focus on input validation"
+
+# Use these to prepend or append context to the prompt
+PROMPT_PRE: "You are reviewing critical code. Please be strict.\n\n"
+PROMPT_POST: "\n\nPlease provide practical advice."

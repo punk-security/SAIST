@@ -155,6 +155,34 @@ This setup will:
 
 ---
 
+## 🧠 Custom Prompt Rules 
+
+You can modify the system prompt used by creating a file named `saist.rules` in your working directory.
+
+This file supports the following YAML keys:
+
+PROMPT_OVERRIDE - Fully replaces the system prompt 
+PROMPT_PRE - Adds text before the existing prompt 
+PROMPT_POST - Adds text after the existing prompt 
+
+If multiple keys are defined, `PRE` and `POST` will wrap around the override text.
+
+---
+
+### 📝 `saist.rules.example`
+
+```yaml
+# Example prompt modification
+
+# Use this to completely override the system prompt:
+PROMPT_OVERRIDE: "Identify any potential vulnerabilites in the following code. Focus on input validation"
+
+# Use these to prepend or append context to the prompt
+PROMPT_PRE: "You are reviewing critical code. Please be strict.\n\n"
+PROMPT_POST: "\n\nPlease provide practical advice."
+
+---
+
 ## 🛣️ Roadmap
 
 - Ability to influence the prompts

@@ -1,5 +1,8 @@
 import os
 import yaml
+import logging
+
+logger = logging.getLogger("saist")
 
 class PromptRules:
     RulesFile = "saist.rules"
@@ -7,31 +10,32 @@ class PromptRules:
     @staticmethod
     def apply_rules(prompt):
         rules = PromptRules.load_rules()
-
-        override_prompt = rules.get("PROMPT_OVERRIDE")
-        if override_prompt:
-            #skip pre and post if override is present
-            return override_prompt
-
+    
+        override = rules.get("PROMPT_OVERRIDE", prompt)
         pre = rules.get("PROMPT_PRE", "")
         post = rules.get("PROMPT_POST", "")
-
-        #add pre/post if they are present
-        return f"{pre}{prompt}{post}"
+        return f"{pre}{override}{post}"
 
     @staticmethod
     def load_rules():
         if not os.path.exists(PromptRules.RulesFile):
-            print("No saist.rules file found.")
+            logger.warning("No saist.rules file found.")
             return {} #return empty rules
 
         try:
             with open(PromptRules.RulesFile, 'r') as file:
                 yaml_content = file.read()
                 rules = yaml.safe_load(yaml_content) #using safe_load to prevent exploits (thank you stack overflow)
+                
+                keys = [key for key in ["PROMPT_OVERRIDE", "PROMPT_PRE", "PROMPT_POST"] if key in rules]
+            if keys:
+                logger.debug(f"Loaded prompt rules: {', '.join(keys)}")
+            else:
+                logger.debug("No valid keys found.")
+                
                 return rules if rules is not None else {}
         except Exception as ex:
-            print("Error reading saist.rules: " + str(ex))
+            logger.error(f"Error reading saist.rules: {ex}")
             return {}
 
 #I first wrote this code in c# using dictionaries and a similar yaml parsing library for .net and then used a converter for python. 
