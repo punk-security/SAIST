@@ -8,15 +8,22 @@ class PromptRules:
     RulesFile = "saist.rules"
 
     @staticmethod
-    def apply_rules(pre_prompt: str, post_prompt: str = "") -> str:
+    def apply_rules(prompt: str) -> str:
         rules = PromptRules.load_rules()
-    
-        override = rules.get("PROMPT_OVERRIDE")
-        pre = rules.get("PROMPT_PRE", "")
-        post = rules.get("PROMPT_POST", "")
 
-        final_prompt = override if override else (pre_prompt + post_prompt) #if override isn't specified, this should just use the prefix and suffix with the orig prompt
-        return f"{pre}{final_prompt}{post}"
+        override = rules.get("PROMPT_OVERRIDE")
+        pre = rules.get("PROMPT_PRE")
+        post = rules.get("PROMPT_POST")
+
+        final_prompt = override if override else prompt
+
+        if pre:
+            final_prompt = f"{pre}{final_prompt}"
+        if post:
+            final_prompt = f"{final_prompt}{post}"
+
+        return final_prompt
+
 
 
     @staticmethod
@@ -36,7 +43,7 @@ class PromptRules:
             else:
                 logger.debug("No valid keys found.")
 
-                return rules if rules is not None else {}
+            return rules if rules is not None else {}
         except Exception as ex:
             logger.error(f"Error reading saist.rules: {ex}")
             return {}
