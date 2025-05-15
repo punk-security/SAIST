@@ -12,19 +12,15 @@ class PromptRules:
         rules = PromptRules.load_rules()
 
         override = rules.get("PROMPT_OVERRIDE")
-        pre = rules.get("PROMPT_PRE")
-        post = rules.get("PROMPT_POST")
+        pre = rules.get("PROMPT_PRE", "")
+        post = rules.get("PROMPT_POST", "")
 
-        final_prompt = override if override else prompt
-
-        if pre:
-            final_prompt = f"{pre}{final_prompt}"
-        if post:
-            final_prompt = f"{final_prompt}{post}"
+        if override:
+            final_prompt = f"{pre}{override}{post}"
+        else:
+            final_prompt = f"{pre}{prompt}{post}"
 
         return final_prompt
-
-
 
     @staticmethod
     def load_rules():
