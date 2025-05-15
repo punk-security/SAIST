@@ -19,6 +19,7 @@ COPY saist .
 # Exports
 ENV SAIST_COMMAND "docker run punksecurity/saist" 
 ENV SAIST_CSV_PATH "/app/results.csv" 
+ENV SAIST_LATEX_PATH "/app/report.tex"
 ENV SAIST_WEB_HOST "0.0.0.0"
 ENV PYTHONUNBUFFERED 1
 ENTRYPOINT [ "python3", "/app/main.py" ]

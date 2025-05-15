@@ -15,3 +15,8 @@ class Findings(BaseModel):
 
 class FindingEnriched(Finding):
     file_contents: str
+
+class FindingContext(Finding):
+    context: str
+    context_start: int
+    context_end: int

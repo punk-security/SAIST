@@ -186,6 +186,15 @@ parser.add_argument(
     envvar="SAIST_CSV_PATH", action=EnvDefault, required=False, default="results.csv"
     )
 
+parser.add_argument(
+    "--latex", help = "Write results to report.latex",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--latex-path", type=str, help = "Path to write teX results",
+    envvar="SAIST_LATEX_PATH", action=EnvDefault, required=False, default="report.tex"
+    )
 
 parser.add_argument(
     "-v",
