@@ -6,7 +6,26 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-FROM alpine:latest as tex_builder
+FROM python:3.12-alpine AS saist
+RUN apk update && apk add git
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN mkdir -p /app/results
+WORKDIR /app
+
+COPY saist .
+
+# Exports
+ENV SAIST_COMMAND "docker run punksecurity/saist" 
+ENV SAIST_CSV_PATH "/app/results.csv" 
+ENV SAIST_LATEX_PATH "/app/report.tex"
+ENV SAIST_WEB_HOST "0.0.0.0"
+ENV PYTHONUNBUFFERED 1
+ENTRYPOINT [ "python3", "/app/main.py" ]
+CMD [ "-h" ]
+
+FROM saist as saist-tex
 
 ARG TL_MIRROR="https://texlive.info/CTAN/systems/texlive/tlnet"
 ARG TL_PACKAGES="lineno titlesec upquote minted blindtext booktabs fontawesome latexmk parskip xcolor"
@@ -35,22 +54,3 @@ ENV PATH="${PATH}:/opt/texlive/bin/x86_64-linuxmusl"
 
 RUN tlmgr update --self && \
     tlmgr install ${TL_PACKAGES}
-
-FROM python:3.12-alpine
-RUN apk update && apk add git
-COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-RUN mkdir -p /app/results
-WORKDIR /app
-
-COPY saist .
-
-# Exports
-ENV SAIST_COMMAND "docker run punksecurity/saist" 
-ENV SAIST_CSV_PATH "/app/results.csv" 
-ENV SAIST_LATEX_PATH "/app/report.tex"
-ENV SAIST_WEB_HOST "0.0.0.0"
-ENV PYTHONUNBUFFERED 1
-ENTRYPOINT [ "python3", "/app/main.py" ]
-CMD [ "-h" ]
