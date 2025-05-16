@@ -187,13 +187,23 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--latex", help = "Write results to report.latex",
+    "--tex", help = "Write results to report.tex",
     required=False, action='store_true'
     )
 
 parser.add_argument(
-    "--latex-path", type=str, help = "Path to write teX results",
-    envvar="SAIST_LATEX_PATH", action=EnvDefault, required=False, default="report.tex"
+    "--tex-filename", type=str, help = "Filename of teX file",
+    envvar="SAIST_TEX_FILENAME", action=EnvDefault, required=False, default="report.tex"
+    )
+
+parser.add_argument(
+    "--pdf", help = "Write results of PDF report",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--pdf-filename", type=str, help = "Filename of PDF report",
+    envvar="SAIST_PDF_FILENAME", action=EnvDefault, required=False, default="report.pdf"
     )
 
 parser.add_argument(
