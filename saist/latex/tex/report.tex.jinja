@@ -14,15 +14,15 @@
 
 \section{Summary}
 
-{{ comment | replace("_", "\_") | replace("&", "\&") }}
+{{ escape_tex(comment) }}
 
 \blindtext
 
 \section{Findings}
 
 {%- for finding in findings if finding.cwe -%}
-    {%- set issue = finding.issue | replace("_", "\_") | replace("&", "\&") -%}
-    {%- set file = finding.file | replace("_", "\_") | replace("&", "\&") -%}
+    {%- set issue = escape_tex(finding.issue) -%}
+    {%- set file = escape_tex(finding.file) -%}
 \subsection{ {{ finding.cwe }} - {{ file }} }
 {\renewcommand{\arraystretch}{1}%
 \begin{tabularx}{\textwidth}{|X|X|X|}

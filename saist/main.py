@@ -315,27 +315,26 @@ async def main():
         w = FindingsServer(args.web_host, args.web_port)
         w.run(enriched_findings)
 
-        if args.pdf or args.tex:
-            findings_context = []
-            for finding in all_findings:
-                context, start, end = await context_from_finding(scm, finding)
-                fc = FindingContext.model_validate(
-                    {
-                        **dict(finding),
-                        "context": context,
-                        "context_start": start,
-                        "context_end": end,
-                    }
-                )
-                findings_context.append(fc)
-            
-            l = Latex(findings_context, comment)
-            l.output_pdf(
-                f"{Latex._DEFAULT_OUTPUT_DIR}/{args.tex_filename}",
-                f"{Latex._DEFAULT_OUTPUT_DIR}/{args.pdf_filename}",
+    if args.pdf or args.tex:
+        findings_context = []
+        for finding in all_findings:
+            context, start, end = await context_from_finding(scm, finding)
+            fc = FindingContext.model_validate(
+                {
+                    **dict(finding),
+                    "context": context,
+                    "context_start": start,
+                    "context_end": end,
+                }
             )
-            
-            logger.info(f"Written PDF file to {Latex._DEFAULT_OUTPUT_DIR}/{args.pdf_filename}")
+            findings_context.append(fc)
+        l = Latex(findings_context, comment)
+        l.output_pdf(
+            f"{Latex._DEFAULT_OUTPUT_DIR}/{args.tex_filename}",
+            f"{Latex._DEFAULT_OUTPUT_DIR}/{args.pdf_filename}",
+        )
+
+        logger.info(f"Written PDF file to {Latex._DEFAULT_OUTPUT_DIR}/{args.pdf_filename}")
 
     if args.ci and len(all_findings) > 0:
         exit(1)

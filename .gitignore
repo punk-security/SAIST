@@ -3,6 +3,7 @@
 .idea
 .venv
 .vscode/**
+build
 findings.csv
 report.pdf
 report.tex

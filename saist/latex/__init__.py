@@ -17,16 +17,24 @@ class Latex:
     comment: str
 
     def _render_tex(self) -> str:
-        template = Environment(loader=FileSystemLoader("latex/tex")).get_template(
+        env = Environment(loader=FileSystemLoader("latex/tex")).get_template(
             self._DEFAULT_TEX_TEMPLATE
         )
 
-        return template.render({"findings": self.findings, "comment": self.comment})
+        env.globals.update(escape_tex=self._escape_tex)
+
+        return env.render({"findings": self.findings, "comment": self.comment})
 
     def _write_tex(self, tex_path: str):
         with open(tex_path, "w") as fp:
             fp.write(self._render_tex())
             logger.info(f"Written TeX file to '{tex_path}'")
+
+    def _escape_tex(self, tex: str) -> str:
+        for char in "&%$_{}":
+            tex = tex.replace(char, f"\\{char}")
+
+        return tex
 
     def output_pdf(self, tex_path: str, pdf_path: str):
         if which("latexmk") == None:
