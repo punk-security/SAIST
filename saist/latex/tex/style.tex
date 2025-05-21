@@ -1,0 +1,36 @@
+\documentclass[titlepage]{article}
+\usepackage[margin=0.8in]{geometry}
+\usepackage[parfill]{parskip}
+
+\usepackage[english]{babel}
+\usepackage{blindtext}
+
+\usepackage{fontawesome}
+\usepackage[T1]{fontenc}
+\renewcommand*\familydefault{\sfdefault}
+
+\usepackage[table]{xcolor}
+\usepackage{booktabs, tabularx}
+
+\usepackage[cache=false]{minted}
+\setminted{
+    frame=lines,
+    autogobble,
+    linenos,
+}
+
+\usepackage{graphicx}
+
+\input{latex/tex/brand.tex}
+
+\usepackage{titlesec}
+\titlespacing{\section}
+    {0pt}{1\baselineskip}{1.2\baselineskip}
+
+\titleformat{\section}
+    {\Large\sffamily\bfseries\color{ColorSecondary}}
+    {\thesection}{.5em}{}
+
+\titleformat{\subsection}
+    {\large\sffamily\color{ColorSecondary}}
+    {\thesubsection}{.7em}{}
