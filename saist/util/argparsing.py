@@ -187,12 +187,12 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--tex", help = "Write results to report.tex",
+    "--tex", help = "Write results of TeX file",
     required=False, action='store_true'
     )
 
 parser.add_argument(
-    "--tex-filename", type=str, help = "Filename of teX file",
+    "--tex-filename", type=str, help = "Filename of TeX file",
     envvar="SAIST_TEX_FILENAME", action=EnvDefault, required=False, default="report.tex"
     )
 
