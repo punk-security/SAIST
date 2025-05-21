@@ -3,7 +3,8 @@ from typing import Annotated
 
 class Finding(BaseModel):
     file: str
-    snippet: Annotated[str, Field(description= "a single line code snipper containing the security issue") ]
+    category: str
+    snippet: Annotated[str, Field(description= "the single line of code snippet from the file most relevant to the detected issue") ]
     issue: str
     recommendation: str
     cwe: str
