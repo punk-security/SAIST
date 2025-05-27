@@ -1,6 +1,6 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/punk-security/saist/graphs/commit-activity)
 [![Maintainer](https://img.shields.io/badge/maintainer-PunkSecurity-blue)](https://www.punksecurity.co.uk)
-[![Docker Pulls](https://img.shields.io/docker/pulls/punksecurity/saist)](https://hub.docker.com/r/punksecurity/dnsreaper)
+[![Docker Pulls](https://img.shields.io/docker/pulls/punksecurity/saist)](https://hub.docker.com/r/punksecurity/saist)
 
 # 🪄 SAIST - Static AI-powered Scanning Tool
 
@@ -41,7 +41,7 @@ We support OLLAMA for local / offline code scanning.
 
 ### Run direct
 ```bash
-git clone https://github.com/yourname/saist.git
+git clone https://github.com/punk-security/saist.git
 cd saist
 pip install -r requirements.txt
 ```
@@ -133,6 +133,7 @@ This setup will:
 | `--llm-model` | (Optional) Specific model (e.g., `gpt-4o`) |
 | `--interactive` | Chat with the LLM after scan |
 | `--web` | Launch a local web server |
+| `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
 | `--csv` | Output findings to `findings.csv` |
 | `--ci` | Exit with code 1 if vulnerabilities found |
 | `-v, --verbose` | Increase output verbosity |

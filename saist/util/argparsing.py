@@ -157,7 +157,7 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--disable-tools", help="Disable usage of tools in findings",
+    "--disable-tools", help="Disable usage of tools during code analysis (this is a good cost saving)",
     required=False, action="store_true"
     )
 
