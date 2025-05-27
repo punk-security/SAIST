@@ -28,7 +28,7 @@ jobs:
             --progress=plain \
             --tag docker.io/punksecurity/saist:lite-${{ steps.version.outputs.version }} \
             --tag docker.io/punksecurity/saist:lite-latest \
-            --platform linux/amd64
+            --platform linux/amd64 \
             --target saist
       - name: Build and push SAIST
         run: |
@@ -37,5 +37,5 @@ jobs:
             --progress=plain \
             --tag docker.io/punksecurity/saist:${{ steps.version.outputs.version }} \
             --tag docker.io/punksecurity/saist:latest \
-            --platform linux/amd64
+            --platform linux/amd64 \
             --target saist-tex

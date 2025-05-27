@@ -1,11 +1,8 @@
 import argparse
-import math
 from os import linesep, environ, cpu_count
 import sys
-import shutil
+from shutil import which
 
-import scm.adapters
-import inspect
 
 runtime = environ.get("SAIST_COMMAND", f"{sys.argv[0]}")
 
@@ -234,4 +231,9 @@ def parse_args():
     if args.llm == "ollama" and args.interactive:
         parser.error(f"You cannot use the interactive shell with ollama currently")
    
+    if args.pdf and which("latexmk") == None:
+        parser.error(
+            "[Error] Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag"
+        )
+
     return args
