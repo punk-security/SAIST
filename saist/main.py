@@ -36,7 +36,7 @@ load_dotenv(".env")
 
 logger = logging.getLogger("saist")
 
-async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch_text) -> Optional[list[Finding]]:
+async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch_text, disable_tools: bool) -> Optional[list[Finding]]:
     """
     Analyzes a SINGLE file diff with OpenAI, returning a Findings object or None on error.
     """
@@ -46,7 +46,7 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
         f"\n\nFile: {filename}\n{patch_text}\n"
     )
     try:
-        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [scm.read_file_contents])).findings
+        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [] if disable_tools else [scm.read_file_contents])).findings
     except Exception as e:
         logger.error(f"[Error] File '{filename}': {e}")
         return None
@@ -185,7 +185,7 @@ async def main():
     # 3) Analyze each file in parallel
     print("🔍 Analyzing files for security issues...")
     max_workers = min(args.llm_rate_limit, len(app_files))
-    all_findings = await generate_findings(scm, llm, app_files, max_workers)
+    all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools)
 
     if not all_findings:
         print("✅ No findings reported. Exiting.\n")
@@ -297,20 +297,20 @@ async def main():
     if args.ci and len(all_findings) > 0:
         exit(1)
 
-async def process_file(scm: Scm, llm, filename, patch_text, semaphore):
+async def process_file(scm: Scm, llm, filename, patch_text, semaphore, disable_tools):
     async with semaphore:
         start = asyncio.get_event_loop().time()
-        result = await analyze_single_file(scm, llm, filename, patch_text)
+        result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
         elapsed = asyncio.get_event_loop().time() - start
         if elapsed < 1:
             await asyncio.sleep(1 - elapsed)
     return result
 
-async def generate_findings(scm, llm, app_files, max_concurrent):
+async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools):
     semaphore = asyncio.Semaphore(max_concurrent)
 
     tasks = [
-        process_file(scm, llm, filename, patch_text, semaphore)
+        process_file(scm, llm, filename, patch_text, semaphore, disable_tools)
         for filename, patch_text in app_files
     ]
 
