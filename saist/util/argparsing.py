@@ -235,6 +235,5 @@ def parse_args():
         parser.error(
             "[Error] Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag"
         )
-        exit(1)
 
     return args
