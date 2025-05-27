@@ -19,14 +19,13 @@ jobs:
         id: version
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Build and push SAIST-Lite
         run: |
           docker buildx build . \
             --push \
             --progress=plain \
             --tag docker.io/punksecurity/saist:lite-pr-${{ github.event.number }} \
-            --tag docker.io/punksecurity/saist:lite-latest \
             --platform linux/amd64 \
             --target saist
       - name: Build and push SAIST
@@ -35,6 +34,5 @@ jobs:
             --push \
             --progress=plain \
             --tag docker.io/punksecurity/saist:pr-${{ github.event.number }} \
-            --tag docker.io/punksecurity/saist:latest \
             --platform linux/amd64 \
             --target saist-tex
