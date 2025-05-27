@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from models import FindingContext
 from jinja2 import Environment, FileSystemLoader
 import subprocess
-from shutil import which
 import logging
 import os
 
@@ -19,12 +18,6 @@ class Latex:
     comment: str
 
     def run(self, args):
-        if args.pdf and which("latexmk") == None:
-            logger.error(
-                "[Error] Unable to find 'latexmk' binary in $PATH needed for PDF report building"
-            )
-            exit(1)
-
         pdf_path = os.path.join(self._DEFAULT_OUTPUT_DIR, args.pdf_filename)
         tex_path = os.path.join(self._DEFAULT_OUTPUT_DIR, args.tex_filename)
 
