@@ -11,7 +11,7 @@ from llm.adapters.deepseek import DeepseekAdapter
 from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.openai import OpenAiAdapter
 from llm.adapters.ollama import OllamaAdapter
-from models import FindingEnriched, Finding, Findings
+from models import FindingContext, FindingEnriched, Finding, Findings
 from llm.adapters.anthropic import AnthropicAdapter
 from llm.adapters.bedrock import BedrockAdapter
 from web import FindingsServer
@@ -24,6 +24,7 @@ from util.prompts import prompts
 from scm.adapters.github import Github
 from scm import Scm
 from shell import Shell
+from latex import Latex
 
 from util.argparsing import parse_args
 
@@ -50,6 +51,26 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
     except Exception as e:
         logger.error(f"[Error] File '{filename}': {e}")
         return None
+
+async def context_from_finding(scm: Scm, finding: Finding, context_size: int = 3) -> Optional[list]:
+    """
+
+    """
+    try:
+        file_contents = await scm.read_file_contents(finding.file)
+    except Exception as e:
+        logger.error(f"[Error] File '{finding.file}': {e}")
+        return None
+
+    start = max(1, finding.line_number - context_size)
+    end = finding.line_number + context_size
+
+    context = []
+    lines = file_contents.split("\n")
+    for ln in range(start, min(end + 1, len(lines) + 1)):
+        context.append(lines[ln - 1])
+
+    return "\n".join(context), start, end
 
 def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Finding]) -> str:
     """
@@ -293,6 +314,26 @@ async def main():
             enriched_findings.append(ef)
         w = FindingsServer(args.web_host, args.web_port)
         w.run(enriched_findings)
+
+    if args.pdf or args.tex:
+        findings_context = []
+        for finding in all_findings:
+            try:
+                context, start, end = await context_from_finding(scm, finding)
+                fc = FindingContext.model_validate(
+                    {
+                        **dict(finding),
+                        "context": context,
+                        "context_start": start,
+                        "context_end": end,
+                    }
+                )
+            except:
+                continue
+            finally:
+                findings_context.append(fc)
+        l = Latex(findings_context, comment)
+        l.run(args)
 
     if args.ci and len(all_findings) > 0:
         exit(1)

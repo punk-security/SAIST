@@ -33,6 +33,7 @@ We support OLLAMA for local / offline code scanning.
 - **Interactive chat** with your findings
 - **Web server** UI to view results
 - **CSV export** of findings
+- **PDF report**: Generate PDF reports of SAIST findings
 - **CI/CD pipeline friendly** (exit 1 on findings)
 
 ---

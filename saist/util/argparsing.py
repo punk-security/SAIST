@@ -191,6 +191,25 @@ parser.add_argument(
     envvar="SAIST_CSV_PATH", action=EnvDefault, required=False, default="results.csv"
     )
 
+parser.add_argument(
+    "--tex", help = "Write results of TeX file",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--tex-filename", type=str, help = "Filename of TeX file",
+    envvar="SAIST_TEX_FILENAME", action=EnvDefault, required=False, default="report.tex"
+    )
+
+parser.add_argument(
+    "--pdf", help = "Write results of PDF report",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--pdf-filename", type=str, help = "Filename of PDF report",
+    envvar="SAIST_PDF_FILENAME", action=EnvDefault, required=False, default="report.pdf"
+    )
 
 parser.add_argument(
     "-v",
