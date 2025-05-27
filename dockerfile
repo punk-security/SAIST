@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM python:3.12-alpine AS builder
+FROM python:3.12-alpine AS builder
 
 # Create app directory
 RUN python -m venv /opt/venv
@@ -6,7 +6,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-FROM --platform=$TARGETPLATFORM python:3.12-alpine AS saist
+FROM python:3.12-alpine AS saist
 RUN apk update && apk add git
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -26,7 +26,7 @@ ENV PYTHONUNBUFFERED 1
 ENTRYPOINT [ "python3", "/app/main.py" ]
 CMD [ "-h" ]
 
-FROM --platform=$TARGETPLATFORM saist AS saist-tex
+FROM saist AS saist-tex
 
 ARG TL_MIRROR="https://texlive.info/CTAN/systems/texlive/tlnet"
 ARG TL_PACKAGES="lineno titlesec upquote minted blindtext booktabs fontawesome latexmk parskip xcolor"
