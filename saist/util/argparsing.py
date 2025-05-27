@@ -157,6 +157,11 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--disable-tools", help="Disable usage of tools in findings",
+    required=False, action="store_true"
+    )
+
+parser.add_argument(
     "--web", help = "Launch a web server to display findings",
     required=False, action='store_true'
     )
