@@ -77,8 +77,9 @@ def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Findi
     Uses OpenAI to generate a summary of all findings to be used as the PR review body.
     """
     system_prompt = prompts.SUMMARY
+    prompt = ""
     for f in findings:
-        prompt = f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
+        prompt += f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
 
     try:
         return adapter.prompt(system_prompt, prompt)
