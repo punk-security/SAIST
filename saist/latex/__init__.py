@@ -33,7 +33,7 @@ class Latex:
 
         if args.pdf:
             rc = subprocess.run(
-                ["latexmk", "-pdf", f"-outdir={self._DEFAULT_OUTPUT_DIR}", tex_path],
+                ["latexmk", "-pdf", f"-outdir={self._DEFAULT_OUTPUT_DIR}", tex_path], stdout=subprocess.DEVNULL,
             ).returncode
 
             if rc != 0:
@@ -42,7 +42,7 @@ class Latex:
 
             logger.info(f"Written PDF report to: '{pdf_path}'")
             logger.debug(f"Cleaning up auxiliary files in '{self._DEFAULT_OUTPUT_DIR}'")
-            subprocess.run(["latexmk", "-c"], cwd=self._DEFAULT_OUTPUT_DIR)
+            subprocess.run(["latexmk", "-c"], cwd=self._DEFAULT_OUTPUT_DIR, stdout=subprocess.DEVNULL)
 
     def _render_tex(self) -> str:
         env = Environment(
