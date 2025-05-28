@@ -320,7 +320,7 @@ async def main():
         findings_context = []
         for finding in all_findings:
             try:
-                context, start, end = await context_from_finding(scm, finding)
+                context, start, end = await context_from_finding(scm, finding, 10)
                 fc = FindingContext.model_validate(
                     {
                         **dict(finding),

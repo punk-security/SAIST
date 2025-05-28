@@ -5,9 +5,10 @@
 \begin{titlepage}
     \centering
     \vspace*{5cm}
-
     \includegraphics[width=0.4\textwidth]{\LogoTitlepage}\\[0.5cm]
-    {\Large\sffamily\bfseries\color{ColorSecondary}{SAIST Report}}
+{\Huge\sffamily\bfseries\color{ColorSecondary}{AI generated code review}\\[0.75em]
+\Large\sffamily created by \href{https://github.com/punk-security/SAIST}{\textbf{SAIST}}}
+
 \end{titlepage}
 
 \tableofcontents
@@ -16,25 +17,31 @@
 
 {{ escape_tex(comment) }}
 
+\newpage
 \section{Findings}
 
 {%- for finding in findings if finding.cwe -%}
+    {%- set title = escape_tex(finding.title) -%}
     {%- set issue = escape_tex(finding.issue) -%}
     {%- set file = escape_tex(finding.file) -%}
-\subsection{ {{ finding.cwe }} - {{ file }} }
-{\renewcommand{\arraystretch}{1}%
-\begin{tabularx}{\textwidth}{|X|X|X|}
-    \hline
-    \rowcolor{ColorPrimary} \color{white}{\textbf{Severity}} & \color{white}{\textbf{Issue}} & \color{white}{\textbf{Recommendation}} \\
-    {%- if finding.priority > 4 -%} \colorbox{ColorOrange}{Medium}
-    {%- elif finding.priority > 7 -%} \colorbox{ColorRed}{High}
-    {%- elif finding.priority > 8 -%} \colorbox{ColorRed}{Critical}
-    {%- else -%} \colorbox{ColorBlue}{Low} {%- endif -%}
-    & {{ issue }} &
-    {%- if finding.recommendation is not none %} {{ finding.recommendation }} \\
-    {%- else -%} Not applicable. \\ {%- endif %}
-    \hline
-\end{tabularx}
+    {%- set recommendation = escape_tex(finding.recommendation) -%}
+\subsection{ {{ finding.cwe }} - {{ file }} - {{title}} }
+
+\textbf{Priority:}\;
+{%- if finding.priority > 8 -%}\colorbox{ColorRed}{Critical}
+{%- elif finding.priority > 7 -%}\colorbox{ColorRed}{High}
+{%- elif finding.priority > 4 -%}\colorbox{ColorOrange}{Medium}
+{%- else -%}\colorbox{ColorBlue}{Low}
+{%- endif -%}\\
+
+\textbf{Issue:}\; {{ issue }}\\
+
+\textbf{Recommendation:}\;
+{%- if finding.recommendation is not none -%}
+  {{ recommendation }}
+{%- else -%}
+  Not applicable.
+{%- endif -%}
 
 \begin{figure}[!ht]
     \begin{minted}[firstnumber={{ finding.context_start }},highlightlines={{ finding.line_number}}]{python}
@@ -42,6 +49,6 @@
     \end{minted}
     \caption{\textbf{ {{file}} } on line \textbf{ {{ finding.line_number }} }}
 \end{figure}
+\newpage
 {%- endfor -%}
-
 \end{document}

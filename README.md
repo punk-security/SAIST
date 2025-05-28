@@ -134,6 +134,8 @@ filename.
 > It is recommended to use the provided Docker image for generating PDF reports, as it includes the necessary TeX suite,
 which can be quite large. This ensures that all dependencies are met and the report is generated properly.
 
+If not, you need to install latexmk to make it work.
+
 ### 🐋 Example (Docker)
 
 To run saist using Docker and access the generated PDF report, you can mount a volume to ensure that the report is accessible on

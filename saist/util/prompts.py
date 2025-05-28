@@ -2,10 +2,10 @@ class prompts():
     SUMMARY_PRE = """
     You are a senior application security engineer.
     Given the following list of findings (issue descriptions and recommendations)
-    Write a concise but informative summary suitable for a GitHub Pull Request review comment.
-    It should be just a few sentences.
-    Group similar issues, and prioritize by severity. Use markdown formatting.
-    Return only the markdown summary, no other text. Do not put the markdown inside ```
+    Write an informative summary suitable, and include headings
+    Group similar issues, and prioritize by severity.
+    Do not use any markdown
+    Return only the summary, no other text
     """
     SUMMARY_POST = """
     findings:
