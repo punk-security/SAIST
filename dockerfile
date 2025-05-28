@@ -29,7 +29,6 @@ CMD [ "-h" ]
 FROM saist AS saist-tex
 
 ARG TL_MIRROR="https://texlive.info/CTAN/systems/texlive/tlnet"
-ARG TL_PACKAGES="lineno titlesec upquote minted blindtext booktabs fontawesome latexmk parskip xcolor"
 
 COPY saist/latex/texlive.profile /tmp
 
@@ -43,6 +42,8 @@ RUN apk add --no-cache perl curl fontconfig && \
     rm -vrf /tmp/*
 
 ENV PATH="${PATH}:/opt/texlive/bin/x86_64-linuxmusl"
+
+ARG TL_PACKAGES="lineno titlesec upquote minted blindtext booktabs fontawesome latexmk parskip xcolor"
 
 RUN tlmgr update --self && \
     tlmgr install ${TL_PACKAGES}
