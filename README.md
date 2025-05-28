@@ -81,7 +81,7 @@ export SAIST_LLM_API_KEY=your-api-key
 | Launch web server to view findings | `saist/main.py --llm deepseek --web filesystem /path/to/code` |
 | Interactive shell after scanning | `saist/main.py --llm ollama --interactive filesystem /path/to/code` |
 | Export findings as CSV | `saist/main.py --llm openai --csv filesystem /path/to/code` |
-
+| Export findings as PDF report | `saist/main.py --llm openai --pdf filesystem /path/to/code` |
 ---
 
 ## 🗂️ File Filtering
@@ -101,7 +101,6 @@ saist respects **file include/exclude rules** via two optional files in the root
     - `tests/**` in `saist.ignore` will ignore the entire tests folder
 
 > Note: saist currently does basic glob pattern matching. More advanced `.gitignore`-style support is coming soon!
-
 ---
 
 ### 📝 Example
@@ -122,7 +121,34 @@ docs/**
 This setup will:
 - Only scan `.py`, `.ts`, and specific `.js` files
 - Ignore anything under `tests/` and `docs/`
+---
 
+## 📄 PDF report generation
+
+saist allows you to generate PDF reports summarizing your findings, making it easier to share insights with your team.
+
+To create a PDF report, simply use the `--pdf` flag when running the scan. By default, the report will be saved to
+`reporting/report.pdf`. You can customize the filename by using the `--pdf-filename` option followed by your desired
+filename.
+
+> It is recommended to use the provided Docker image for generating PDF reports, as it includes the necessary TeX suite,
+which can be quite large. This ensures that all dependencies are met and the report is generated properly.
+
+If not, you need to install latexmk to make it work.
+
+### 🐋 Example (Docker)
+
+To run saist using Docker and access the generated PDF report, you can mount a volume to ensure that the report is accessible on
+your host machine. Below is an example command that demonstrates how to do this with the filesystem SCM adapter.
+
+```bash
+docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist --pdf --llm <llm_provider> [options] filesystem /code
+```
+
+| Volume | Desciption |
+|:------|:------------|
+| -v $PWD/code:/code | Mounts the `code` directory from your host to the `/code` directory inside the container. This is where your codebase is located for scanning. |
+| -v $PWD/reporting:/app/reporting | Mounts the `reporting` directory from your host to the `/app/reporting` directory inside the container. This is where the generated PDF report will be saved, making it accessible on your host machine. |
 ---
 
 ## ⚙️ Command Options
@@ -136,6 +162,7 @@ This setup will:
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
 | `--csv` | Output findings to `findings.csv` |
+| `--pdf` | Output findings to PDF report (`report.pdf`) |
 | `--ci` | Exit with code 1 if vulnerabilities found |
 | `-v, --verbose` | Increase output verbosity |
 | _Git-specific:_ |

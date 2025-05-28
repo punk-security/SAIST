@@ -4,6 +4,7 @@ from jinja2 import Environment, FileSystemLoader
 import subprocess
 import logging
 import os
+import re
 
 logger = logging.getLogger("saist.latex")
 
@@ -25,6 +26,8 @@ class Latex:
         logger.info(f"Written TeX file to: '{tex_path}'")
 
         if args.pdf:
+            print("\n📝 Generating PDF report...")
+
             rc = subprocess.run(
                 ["latexmk", "-pdf", f"-outdir={self._DEFAULT_OUTPUT_DIR}", tex_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
             ).returncode
@@ -33,19 +36,19 @@ class Latex:
                 logger.error(f"Unable to build PDF '{tex_path}' -> '{pdf_path}'")
                 exit(1)
 
-            logger.info(f"Written PDF report to: '{pdf_path}'")
+            print(f"✨ Written report to '{pdf_path}'\n")
+
             logger.debug(f"Cleaning up auxiliary files in '{self._DEFAULT_OUTPUT_DIR}'")
             subprocess.run(["latexmk", "-c"], cwd=self._DEFAULT_OUTPUT_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, )
 
     def _render_tex(self) -> str:
         env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "tex"))
-        ).get_template(self._DEFAULT_TEX_TEMPLATE)
-
+        )
         env.globals.update(escape_tex=self._escape_tex)
-
-        return env.render({"findings": self.findings, "comment": self.comment})
-
+        template = env.get_template(self._DEFAULT_TEX_TEMPLATE)
+        return template.render({"findings": self.findings, "comment": self.comment})
+    
     def _write_tex(self, tex_path: str):
         try:
             os.makedirs(os.path.dirname(tex_path), exist_ok=True)
@@ -55,8 +58,27 @@ class Latex:
             logger.error(f"Unable to write TeX file to '{tex_path}': {e}")
             exit(1)
 
-    def _escape_tex(self, tex: str) -> str:
-        for char in "&%$_{}":
-            tex = tex.replace(char, f"\\{char}")
+    def _escape_tex(self, text: str) -> str:
+        if not text:
+            return ""
 
-        return tex
+        specials = {
+            "&":  r"\&",
+            "%":  r"\%",
+            "$":  r"\$",
+            "_":  r"\_",
+            "{":  r"\{",
+            "}":  r"\}",
+            "#":  r"\#",
+            "~":  r"\textasciitilde{}",
+            "^":  r"\^{}",
+            "\\": r"\textbackslash{}",
+        }
+
+        def repl(match: re.Match) -> str:
+            char = match.group(0)
+            return specials[char]
+
+        # negative look-behind makes sure we don’t double-escape something like \%
+        pattern = r'(?<!\\)[&%$_{}#~^\\]'
+        return re.sub(pattern, repl, text)

@@ -232,8 +232,6 @@ def parse_args():
         parser.error(f"You cannot use the interactive shell with ollama currently")
    
     if args.pdf and which("latexmk") == None:
-        parser.error(
-            "[Error] Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag"
-        )
+        parser.error("Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag")
 
     return args
