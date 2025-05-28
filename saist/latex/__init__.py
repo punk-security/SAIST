@@ -13,7 +13,7 @@ logger = logging.getLogger("saist.latex")
 @dataclass
 class Latex:
     _DEFAULT_TEX_TEMPLATE = "report.tex.jinja"
-    _DEFAULT_OUTPUT_DIR = "build"
+    _DEFAULT_OUTPUT_DIR = "reporting"
 
     findings: list[FindingContext]
     comment: str
@@ -55,6 +55,7 @@ class Latex:
 
     def _write_tex(self, tex_path: str):
         try:
+            os.makedirs(os.path.dirname(tex_path), exist_ok=True)
             with open(tex_path, "w") as fp:
                 fp.write(self._render_tex())
         except Exception as e:
