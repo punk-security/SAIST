@@ -13,3 +13,4 @@ class DeepseekAdapter(BaseLlmAdapter):
             model,
             provider = DeepSeekProvider( api_key=api_key ),
         )
+        self.model_name = self.model.model_name

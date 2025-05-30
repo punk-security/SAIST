@@ -118,23 +118,23 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
 
     if args.llm == 'anthropic':
         llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
-        logger.debug(f"Using LLM: anthropic Model: {llm.model.model_name}")
+        logger.debug(f"Using LLM: anthropic Model: {llm.model_name}")
     if args.llm == 'bedrock':
         llm = BedrockAdapter( api_key = args.llm_api_key, model=model)
-        logger.debug(f"Using LLM: AWS bedrock Model: {llm.model.model_name}")
+        logger.debug(f"Using LLM: AWS bedrock Model: {llm.model_name}")
     elif args.llm == 'deepseek':
         llm = DeepseekAdapter(api_key = args.llm_api_key, model=model)
-        logger.debug(f"Using LLM: deepseek Model: {llm.model.model_name}")
+        logger.debug(f"Using LLM: deepseek Model: {llm.model_name}")
     elif args.llm ==  'openai':
         llm = OpenAiAdapter(api_key = args.llm_api_key, model=model)
-        logger.debug(f"Using LLM: openai Model: {llm.model.model_name}")
+        logger.debug(f"Using LLM: openai Model: {llm.model_name}")
     elif args.llm ==  'gemini':
         llm = GeminiAdapter(api_key = args.llm_api_key, model=model)
-        logger.debug(f"Using LLM: gemini Model: {llm.model.model_name}")
+        logger.debug(f"Using LLM: gemini Model: {llm.model_name}")
     elif args.llm == 'ollama':
         llm = OllamaAdapter(api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
         await llm.initialize()
-        logger.debug(f"Using LLM: ollama Model: {llm.model.model_name}")
+        logger.debug(f"Using LLM: ollama Model: {llm.model_name}")
     else:
         raise Exception("Could not determine a suitable LLM to use")
     return llm
@@ -161,7 +161,7 @@ async def main():
 
     print("🚀 Initializing LLM adapter...")
     llm = await _get_llm_adapter(args)
-    print(f"✅ Using LLM: {args.llm} (Model: {llm.model.model_name})\n")
+    print(f"✅ Using LLM: {args.llm} (Model: {llm.model_name})\n")
 
     if args.SCM == "poem":
         print("📝 Generating poem...\n")

@@ -11,3 +11,5 @@ class BedrockAdapter(BaseLlmAdapter):
         if model is None:
             model = "anthropic.claude-3-sonnet-20240229-v1:0"
         self.model = BedrockConverseModel( model )
+        self.model_name = self.model.model_name
+
