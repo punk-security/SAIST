@@ -14,6 +14,7 @@ class OllamaAdapter(BaseLlmAdapter):
         if model is None:
             model = "llama3:latest"
         self.model = model
+        self.model_name = self.model
         self.client = ollama.AsyncClient(host=base_url)
 
 

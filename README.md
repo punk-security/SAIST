@@ -75,13 +75,14 @@ export SAIST_LLM_API_KEY=your-api-key
 |:-----|:--------|
 | Get a DevSecOps poem | `saist/main.py --llm openai poem` |
 | Scan a local folder | `saist/main.py --llm deepseek filesystem /path/to/code` |
+| Scan a local folder with ollama from within docker| `docker run --network=host -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm ollama --llm-model gemma3:4b fileystem /vulnerableapp` |
 | Scan a local Git repo | `saist/main.py --llm openai git /path/to/repo` |
 | Scan a local Git repo (branch diff) | `saist/main.py --llm openai git /path/to/repo --ref-for-compare main --ref-to-compare feature-branch` |
 | Scan a GitHub PR (and update the PR) | `saist/main.py --llm anthropic github yourorg/yourrepo 1234 --github-token your-token` |
 | Launch web server to view findings | `saist/main.py --llm deepseek --web filesystem /path/to/code` |
 | Interactive shell after scanning | `saist/main.py --llm ollama --interactive filesystem /path/to/code` |
 | Export findings as CSV | `saist/main.py --llm openai --csv filesystem /path/to/code` |
-| Export findings as PDF report | `saist/main.py --llm openai --pdf filesystem /path/to/code` |
+| Scan with docker and export findings as PDF report | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm openai --pdf filesystem /vulnerableapp` |
 ---
 
 ## 🗂️ File Filtering

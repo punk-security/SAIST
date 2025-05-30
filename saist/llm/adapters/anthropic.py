@@ -13,5 +13,6 @@ class AnthropicAdapter(BaseLlmAdapter):
             model,
             provider = AnthropicProvider( api_key=api_key )
         )
+        self.model_name = self.model.model_name
 
         self.model_options = {'max_tokens': 8192}
