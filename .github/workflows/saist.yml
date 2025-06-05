@@ -100,13 +100,13 @@ jobs:
               ;;
           esac
           
-          # Build the command with API key
+          # Build the command with API key checking
           if [ "${{ steps.config.outputs.scan_mode }}" = "github" ]; then
-            # PR mode - scan the github PR
+            # PR mode - scan the github PR with token
             if [ -n "$API_KEY" ]; then
-              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --llm-api-key "$API_KEY" github
+              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --llm-api-key "$API_KEY" github ${{ github.repository }} ${{ github.event.pull_request.number }} --github-token "${{ github.token }}"
             else
-              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} github
+              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} github ${{ github.repository }} ${{ github.event.pull_request.number }} --github-token "${{ github.token }}"
             fi
           else
             # Manual mode - scan filesystem
