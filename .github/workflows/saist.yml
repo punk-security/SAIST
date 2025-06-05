@@ -77,22 +77,44 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          # Set the environment variable that SAIST expects for each provider
-          DEEPSEEK_API_KEY: ${{ steps.config.outputs.llm_provider == 'deepseek' && secrets.DEEPSEEK_API_KEY || '' }}
-          OPENAI_API_KEY: ${{ steps.config.outputs.llm_provider == 'openai' && secrets.OPENAI_API_KEY || '' }}
-          ANTHROPIC_API_KEY: ${{ steps.config.outputs.llm_provider == 'anthropic' && secrets.ANTHROPIC_API_KEY || '' }}
-          GEMINI_API_KEY: ${{ steps.config.outputs.llm_provider == 'gemini' && secrets.GEMINI_API_KEY || '' }}
         run: |
           echo "🔍 Running SAIST with ${{ steps.config.outputs.llm_provider }}"
           echo "📁 Scan mode: ${{ steps.config.outputs.scan_mode }}"
           
-          # Build the command
+          # Get the API key for the selected provider
+          case "${{ steps.config.outputs.llm_provider }}" in
+            openai)
+              API_KEY="${{ secrets.OPENAI_API_KEY }}"
+              ;;
+            anthropic)
+              API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+              ;;
+            deepseek)
+              API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
+              ;;
+            gemini)
+              API_KEY="${{ secrets.GEMINI_API_KEY }}"
+              ;;
+            ollama)
+              API_KEY=""  # Ollama doesn't need an API key
+              ;;
+          esac
+          
+          # Build the command with API key
           if [ "${{ steps.config.outputs.scan_mode }}" = "github" ]; then
             # PR mode - scan the github PR
-            python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} github
+            if [ -n "$API_KEY" ]; then
+              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --llm-api-key "$API_KEY" github
+            else
+              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} github
+            fi
           else
             # Manual mode - scan filesystem
-            python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --csv filesystem ${{ steps.config.outputs.scan_target }}
+            if [ -n "$API_KEY" ]; then
+              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --llm-api-key "$API_KEY" --csv filesystem ${{ steps.config.outputs.scan_target }}
+            else
+              python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --csv filesystem ${{ steps.config.outputs.scan_target }}
+            fi
           fi
           
           echo "✅ SAIST scan completed"
