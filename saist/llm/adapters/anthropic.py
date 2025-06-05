@@ -15,4 +15,4 @@ class AnthropicAdapter(BaseLlmAdapter):
         )
         self.model_name = self.model.model_name
 
-        self.model_options = {'max_tokens': 8192}
+        # self.model_options = {'max_tokens': 8192}
