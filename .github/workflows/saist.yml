@@ -52,7 +52,7 @@ jobs:
             echo "🎯 Manual run: Using $LLM_PROVIDER with filesystem scan"
           else
             # PR run - use deepseek and github mode
-            LLM_PROVIDER="deepseek"
+            LLM_PROVIDER="${{ vars.DEFAULT_LLM_PROVIDER || 'deepseek' }}"
             SCAN_MODE="github"
             SCAN_TARGET=""
             echo "🔄 PR run: Using $LLM_PROVIDER with github scan"
