@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       llm_provider:
-        description:
+        description: 'LLM Provider'
         required: true
         default: 'openai'
         type: choice
         options:
-          - 'openai'
+          - openai
           - anthropic
           - deepseek
           - gemini
