@@ -73,14 +73,17 @@ jobs:
           esac
 
       - name: Run Security Review
-        # We do NOT need a separate secret for GITHUB_TOKEN; it's provided by GitHub automatically.
-        # We DO need a secret for OPENAI_API_KEY, stored in your repo or org secrets.
         env:
-          GITHUB_TOKEN: ${{ github.token }}  # The pipeline token
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          SAIST_LLM_API_KEY: ${{ secrets[steps.config.outputs.api_key_secret] }}
+          # Set the environment variable that SAIST expects for each provider
+          DEEPSEEK_API_KEY: ${{ steps.config.outputs.llm_provider == 'deepseek' && secrets.DEEPSEEK_API_KEY || '' }}
+          OPENAI_API_KEY: ${{ steps.config.outputs.llm_provider == 'openai' && secrets.OPENAI_API_KEY || '' }}
+          ANTHROPIC_API_KEY: ${{ steps.config.outputs.llm_provider == 'anthropic' && secrets.ANTHROPIC_API_KEY || '' }}
+          GEMINI_API_KEY: ${{ steps.config.outputs.llm_provider == 'gemini' && secrets.GEMINI_API_KEY || '' }}
         run: |
+          echo "🔍 Running SAIST with ${{ steps.config.outputs.llm_provider }}"
           echo "📁 Scan mode: ${{ steps.config.outputs.scan_mode }}"
           
           # Build the command
