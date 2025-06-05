@@ -9,7 +9,7 @@ on:
       llm_provider:
         description: 'LLM Provider'
         required: true
-        default: 'openai'
+        default: 'deepseek'
         type: choice
         options:
           - openai
@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -39,6 +41,37 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Determine LLM Provider and Scan Mode
+        id: config
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual run - use selected provider and filesystem mode
+            LLM_PROVIDER="${{ github.event.inputs.llm_provider }}"
+            SCAN_MODE="filesystem"
+            SCAN_TARGET="."
+            echo "🎯 Manual run: Using $LLM_PROVIDER with filesystem scan"
+          else
+            # PR run - use deepseek and github mode
+            LLM_PROVIDER="deepseek"
+            SCAN_MODE="github"
+            SCAN_TARGET=""
+            echo "🔄 PR run: Using $LLM_PROVIDER with github scan"
+          fi
+          
+          # Save for next steps
+          echo "llm_provider=$LLM_PROVIDER" >> $GITHUB_OUTPUT
+          echo "scan_mode=$SCAN_MODE" >> $GITHUB_OUTPUT
+          echo "scan_target=$SCAN_TARGET" >> $GITHUB_OUTPUT
+          
+          # Set API key secret name
+          case $LLM_PROVIDER in
+            openai) echo "api_key_secret=OPENAI_API_KEY" >> $GITHUB_OUTPUT ;;
+            anthropic) echo "api_key_secret=ANTHROPIC_API_KEY" >> $GITHUB_OUTPUT ;;
+            deepseek) echo "api_key_secret=DEEPSEEK_API_KEY" >> $GITHUB_OUTPUT ;;
+            gemini) echo "api_key_secret=GEMINI_API_KEY" >> $GITHUB_OUTPUT ;;
+            ollama) echo "api_key_secret=NONE" >> $GITHUB_OUTPUT ;;
+          esac
+
       - name: Run Security Review
         # We do NOT need a separate secret for GITHUB_TOKEN; it's provided by GitHub automatically.
         # We DO need a secret for OPENAI_API_KEY, stored in your repo or org secrets.
@@ -46,6 +79,27 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}  # The pipeline token
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          SAIST_LLM_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          SAIST_LLM_API_KEY: ${{ secrets[steps.config.outputs.api_key_secret] }}
         run: |
-          python saist/main.py --llm deepseek github
+          echo "📁 Scan mode: ${{ steps.config.outputs.scan_mode }}"
+          
+          # Build the command
+          if [ "${{ steps.config.outputs.scan_mode }}" = "github" ]; then
+            # PR mode - scan the github PR
+            python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} github
+          else
+            # Manual mode - scan filesystem
+            python saist/main.py --llm ${{ steps.config.outputs.llm_provider }} --csv filesystem ${{ steps.config.outputs.scan_target }}
+          fi
+          
+          echo "✅ SAIST scan completed"
+
+      - name: Upload Results (Manual runs only)
+        if: github.event_name == 'workflow_dispatch' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: saist-results-${{ github.run_number }}
+          path: |
+            findings.csv
+            *.pdf
+          retention-days: 30
