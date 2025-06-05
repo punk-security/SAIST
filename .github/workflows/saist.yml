@@ -45,14 +45,17 @@ jobs:
         id: config
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Manual run - use selected provider and filesystem mode
             LLM_PROVIDER="${{ github.event.inputs.llm_provider }}"
             SCAN_MODE="filesystem"
             SCAN_TARGET="."
             echo "🎯 Manual run: Using $LLM_PROVIDER with filesystem scan"
           else
-            # PR run - use deepseek and github mode
-            LLM_PROVIDER="${{ vars.DEFAULT_LLM_PROVIDER || 'deepseek' }}"
+            # PR run - use default provider with proper fallback
+            if [ -n "${{ vars.DEFAULT_LLM_PROVIDER }}" ]; then
+              LLM_PROVIDER="${{ vars.DEFAULT_LLM_PROVIDER }}"
+            else
+              LLM_PROVIDER="deepseek"
+            fi
             SCAN_MODE="github"
             SCAN_TARGET=""
             echo "🔄 PR run: Using $LLM_PROVIDER with github scan"
