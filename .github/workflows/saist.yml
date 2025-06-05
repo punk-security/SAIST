@@ -4,6 +4,20 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+  workflow_dispatch:
+    inputs:
+      llm_provider:
+        description:
+        required: true
+        default: 'openai'
+        type: choice
+        options:
+          - 'openai'
+          - anthropic
+          - deepseek
+          - gemini
+          - ollama
+
 jobs:
   security-check:
     runs-on: ubuntu-latest
