@@ -219,6 +219,7 @@ async def main():
     all_findings.sort(key=lambda x: x.priority,reverse=True)
     
     for item in all_findings:
+        item.line_number = -1 #set to -1 for filtering. Gets changed later if finding is valid
         file_name = item.file
         snippet = item.snippet
         issue = item.issue
@@ -251,7 +252,6 @@ async def main():
 
         if not matched_new_line:
             # If we can't find the snippet in the patch, skip
-            item.line_number = -1
             continue
 
         diff_position = line_map[matched_new_line]
