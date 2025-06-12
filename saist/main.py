@@ -329,10 +329,9 @@ async def main():
                         "context_end": end,
                     }
                 )
+                findings_context.append(fc)
             except:
                 continue
-            finally:
-                findings_context.append(fc)
         l = Latex(findings_context, comment)
         l.run(args)
 
