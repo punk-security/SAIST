@@ -52,7 +52,7 @@ def should_process(filepath):
 include_patterns = load_patterns("saist.include")
 if not include_patterns:
     # Fallback to extension-based glob patterns like **/*.py
-    include_patterns = [f"**/*{ext}" for ext in DEFAULT_EXTENSIONS]
+    include_patterns = [f"**/*{ext}" for ext in DEFAULT_EXTENSIONS] + [f"*{ext}" for ext in DEFAULT_EXTENSIONS]
 ignore_patterns = load_patterns("saist.ignore")
 
 logger.info(f"include_patterns: {include_patterns}\nignore_patterns:{ignore_patterns}")
