@@ -20,24 +20,23 @@ class FaikeAdapter(BaseLlmAdapter):
         # Extract the real filename from user_prompt, allowing future steps to work
         filename: str = re.search("(?<=File: )(.*?)(?=\\n)", user_prompt).group(0)
 
-        match type(response_format):
-            case type(Findings):
-                fake_finding: dict[str: any] = {
-                    "file": filename,
-                    "snippet": "[]",
-                    "title": "Fake Issue #1234",
-                    "issue": "Fake Issue",
-                    "recommendation": "Do Nothing",
-                    "cwe": "CWE-NAN",
-                    "priority": 0,
-                    "line_number": 1,
-                }
-                
-                return Findings(findings=[Finding.model_validate(fake_finding)])
+        if response_format is Findings:
+            fake_finding: dict[str: any] = {
+                "file": filename,
+                "snippet": "[]",
+                "title": "Fake Issue #1234",
+                "issue": "Fake Issue",
+                "recommendation": "Do Nothing",
+                "cwe": "CWE-NAN",
+                "priority": 0,
+                "line_number": 1,
+            }
             
-            case _: #Currently prompt_structured only accepts Findings as a return type
-                logger.error(f"Invalid response_format {type(response_format)} passed to prompt_structured (faike.py)")
-                raise Exception(f"Invalid response_format {type(response_format)} passed to prompt_structured (faike.py)")
+            return Findings(findings=[Finding.model_validate(fake_finding)])
+            
+        else: #Currently prompt_structured only accepts Findings as a return type
+            logger.error(f"Invalid response_format {response_format} passed to prompt_structured (faike.py)")
+            raise Exception(f"Invalid response_format {response_format} passed to prompt_structured (faike.py)")
 
         
 
