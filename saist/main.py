@@ -11,6 +11,7 @@ from llm.adapters.deepseek import DeepseekAdapter
 from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.openai import OpenAiAdapter
 from llm.adapters.ollama import OllamaAdapter
+from llm.adapters.faike import FaikeAdapter
 from models import FindingContext, FindingEnriched, Finding, Findings
 from llm.adapters.anthropic import AnthropicAdapter
 from llm.adapters.bedrock import BedrockAdapter
@@ -135,6 +136,9 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
         llm = OllamaAdapter(api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
         await llm.initialize()
         logger.debug(f"Using LLM: ollama Model: {llm.model_name}")
+    elif args.llm == 'faike':
+        llm = FaikeAdapter("", "Fake LLM")
+        logger.debug("Using LLM: Faike AI")
     else:
         raise Exception("Could not determine a suitable LLM to use")
     return llm

@@ -117,7 +117,7 @@ github_parser.add_argument(
 parser.add_argument(
     "--llm",
     type=str,
-    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai"],
+    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
     required=True,
     action=EnvDefault,
     envvar="SAIST_LLM"
@@ -225,11 +225,14 @@ def parse_args():
     if args.llm == "bedrock" and args.interactive:
         parser.error("Sorry, we dont support interactive mode with bedrock as AWS tool calling is a bit broken")
 
-    if args.llm not in [ "ollama", "bedrock" ] and args.llm_api_key is None:
+    if args.llm not in [ "ollama", "bedrock", "faike" ] and args.llm_api_key is None:
         parser.error(f"You must provide an api key with --llm-api-key if using {args.llm}")
 
     if args.llm == "ollama" and args.interactive:
         parser.error(f"You cannot use the interactive shell with ollama currently")
+
+    if args.llm == "faike" and args.interactive:
+        parser.error("Faike LLM: Certified non-existent AI doesn't support interactive mode")
    
     if args.pdf and which("latexmk") == None:
         parser.error("Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag")
