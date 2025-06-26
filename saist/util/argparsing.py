@@ -214,6 +214,11 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--cache-folder", type=str, help = "Folder name for local caching",
+    envvar="SAIST_CACHE_FOLDER", action=EnvDefault, required=False, default="SAISTCache/"
+    )
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",
