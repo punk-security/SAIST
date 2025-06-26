@@ -28,13 +28,14 @@ from scm.adapters.github import Github
 from scm import Scm
 from shell import Shell
 from latex import Latex
-import hashlib
 
 from util.argparsing import parse_args
 
 from util.poem import poem
 
 from util.output import print_banner, write_csv
+
+from util.caching import *
 
 prompts = prompts()
 load_dotenv(".env")
@@ -214,7 +215,7 @@ async def main():
     # 3) Analyze each file in parallel
     print("🔍 Analyzing files for security issues...")
     max_workers = min(args.llm_rate_limit, len(app_files))
-    all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools)
+    all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools, args.disable_caching)
 
     if not all_findings:
         print("✅ No findings reported. Exiting.\n")
@@ -345,45 +346,36 @@ async def main():
     if args.ci and len(all_findings) > 0:
         exit(1)
 
-async def hash_file(scm: Scm, filename: str) -> str:
-    file: str = await scm.read_file_contents(filename)
-    return hashlib.md5(file.encode()).hexdigest()
-
-def finding_from_json_cache(json_dict: dict[str, any]) -> Finding:
-    return Finding.model_validate(json_dict)
-
-async def process_file(scm: Scm, llm, filename, patch_text, semaphore, disable_tools):
+async def process_file(scm: Scm, llm, filename, patch_text, semaphore, disable_tools, disable_caching):
     async with semaphore:
         start = asyncio.get_event_loop().time()
-        #TODO: Pass cache folder into process file `SAISTCache/`
-        hash: str = await hash_file(scm, filename)
-        cache_file = "SAISTCache/"+hash+".json";
-        if not os.path.exists(cache_file):
+        #TODO: Pass cache folder into process_file `SAISTCache/`
+        #      Maybe with argument for cache folder name?
+        if disable_caching is True: 
             result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
-            cache_dict: dict[str, list[Finding] | str] = { 
-                "path": filename,
-                "findings": result,
-            }
-            with open(cache_file, "w") as cf:
-                json.dump(cache_dict, cf, cls=FindingJSONEncoder)
         else:
-            with open(cache_file, 'r') as file:
-                cache_json: dict[str, list[dict] | str] = json.load(file, object_hook=dict[str, list[dict] | str]) #TODO: custom object_hook to parse into list[findings]
-                return [finding_from_json_cache(json_dict) for json_dict in cache_json["findings"]]
+            hash: str = await hash_file(scm, filename)
+            cache_file = "SAISTCache/"+hash+".json";
+            if not os.path.exists(cache_file):
+                result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
+                store_findings_to_cache_file(filename, result, cache_file)
+            else:
+                result = findings_from_cache_file(cache_file)
         elapsed = asyncio.get_event_loop().time() - start
         if elapsed < 1:
             await asyncio.sleep(1 - elapsed)
     return result
 
-async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools):
-    cache_folder: str = "SAISTCache/"
-    if not os.path.exists(cache_folder) or not os.path.isdir(cache_folder):
-        os.makedirs(cache_folder)
+async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, disable_caching):
+    if disable_caching is False:
+        cache_folder: str = "SAISTCache/"
+        if not os.path.exists(cache_folder) or not os.path.isdir(cache_folder):
+            os.makedirs(cache_folder)
     
     semaphore = asyncio.Semaphore(max_concurrent)
 
     tasks = [
-        process_file(scm, llm, filename, patch_text, semaphore, disable_tools)
+        process_file(scm, llm, filename, patch_text, semaphore, disable_tools, disable_caching)
         for filename, patch_text in app_files
     ]
 

@@ -209,6 +209,11 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--disable-caching", help = "Disable local caching of results",
+      action='store_true', required=False
+    )
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",
