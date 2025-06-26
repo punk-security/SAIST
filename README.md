@@ -83,7 +83,7 @@ export SAIST_LLM_API_KEY=your-api-key
 | Interactive shell after scanning | `saist/main.py --llm ollama --interactive filesystem /path/to/code` |
 | Export findings as CSV | `saist/main.py --llm openai --csv filesystem /path/to/code` |
 | Scan with docker and export findings as PDF report | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm openai --pdf filesystem /vulnerableapp` |
-| Scan with docker and retain cache for future runs | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting -v $PWD/SAISTCache:/app/SAISTCache punksecurity/saist --llm openai filesystem /vulnerableapp` |
+| Scan with docker and retain cache for future runs | `docker run -v <folder_path>:/vulnerableapp -v $PWD/SAISTCache:/app/SAISTCache punksecurity/saist --llm openai filesystem /vulnerableapp` |
 | Change caching folder | `saist/main.py --llm openai --cache-folder /path/to/cache filesystem /path/to/code` |
 | Disable findings cache | `saist/main.py --llm openai --disable-caching filesystem /path/to/code` |
 ---
