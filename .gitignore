@@ -3,6 +3,7 @@
 .idea
 .venv
 .vscode/**
+SAISTCache*
 build
 findings.csv
 report.pdf
