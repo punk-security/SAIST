@@ -352,7 +352,7 @@ async def process_file(scm: Scm, llm, filename, patch_text, semaphore, disable_t
             result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
         else:
             hash: str = await hash_file(scm, filename)
-            cache_file = cache_folder + "/" + hash + ".json"
+            cache_file = os.path.join(cache_folder, hash + ".json")
             if not os.path.exists(cache_file):
                 result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
                 store_findings_to_cache_file(filename, result, cache_file)
