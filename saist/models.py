@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Annotated
-from json import JSONEncoder, JSONDecoder
+from json import JSONEncoder
 
 class Finding(BaseModel):
     file: str

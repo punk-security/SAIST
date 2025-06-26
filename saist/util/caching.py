@@ -1,5 +1,5 @@
 from scm import Scm
-from models import Finding
+from models import Finding, FindingJSONEncoder
 import hashlib
 import json
 

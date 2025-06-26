@@ -2,7 +2,6 @@
 import asyncio
 import logging
 import os
-import json
 
 from typing import Optional
 
@@ -14,7 +13,7 @@ from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.openai import OpenAiAdapter
 from llm.adapters.ollama import OllamaAdapter
 from llm.adapters.faike import FaikeAdapter
-from models import FindingContext, FindingEnriched, Finding, Findings, FindingJSONEncoder
+from models import FindingContext, FindingEnriched, Finding, Findings
 from llm.adapters.anthropic import AnthropicAdapter
 from llm.adapters.bedrock import BedrockAdapter
 from web import FindingsServer
