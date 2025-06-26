@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Annotated
+from json import JSONEncoder
 
 class Finding(BaseModel):
     file: str
@@ -10,6 +11,12 @@ class Finding(BaseModel):
     cwe: Annotated[str, Field(description= "CWE id, should conform to CWE-XX or CWE-XXX where X is a number") ]
     priority: int
     line_number: int
+
+class FindingJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Finding):
+            return obj.__dict__
+        return super().default(object)
 
 class Findings(BaseModel):
     findings: list[Finding]

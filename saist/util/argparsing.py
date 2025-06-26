@@ -209,6 +209,16 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--disable-caching", help = "Disable local caching of results",
+      action='store_true', required=False
+    )
+
+parser.add_argument(
+    "--cache-folder", type=str, help = "Folder name for local caching",
+    envvar="SAIST_CACHE_FOLDER", action=EnvDefault, required=False, default="SAISTCache"
+    )
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",
