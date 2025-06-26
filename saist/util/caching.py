@@ -11,7 +11,7 @@ def finding_from_json_cache(json_dict: dict[str, any]) -> Finding:
     return Finding.model_validate(json_dict)
 
 def findings_from_cache_file(cache_file: str) -> list[Finding]:
-    with open(cache_file, 'r') as file:
+    with open(cache_file, 'r', encoding="utf-8") as file:
         cache_json: dict[str, list[dict] | str] = json.load(file, object_hook=dict[str, list[dict] | str])
         return [finding_from_json_cache(json_dict) for json_dict in cache_json["findings"]]
 
@@ -20,5 +20,5 @@ def store_findings_to_cache_file(filename: str, findings: list[Finding], cache_f
             "path": filename,
             "findings": findings,
         }
-    with open(cache_file, "w") as cf:
+    with open(cache_file, "w", encoding="utf-8") as cf:
         json.dump(cache_dict, cf, cls=FindingJSONEncoder)
