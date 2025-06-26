@@ -5,7 +5,7 @@ import json
 
 async def hash_file(scm: Scm, filename: str) -> str:
     file: str = await scm.read_file_contents(filename)
-    return hashlib.md5(file.encode()).hexdigest()
+    return hashlib.sha256(file.encode()).hexdigest()
 
 def finding_from_json_cache(json_dict: dict[str, any]) -> Finding:
     return Finding.model_validate(json_dict)
