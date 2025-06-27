@@ -15,7 +15,7 @@ def findings_from_cache_file(cache_file: str) -> list[Finding]:
         cache_json: dict[str, list[dict] | str] = json.load(file, object_hook=dict[str, list[dict] | str])
         if cache_json["findings"] is not None: 
             return [finding_from_json_cache(json_dict) for json_dict in cache_json["findings"]]
-        return []
+    return []
 
 def store_findings_to_cache_file(filename: str, findings: list[Finding], cache_file: str):
     cache_dict: dict[str, list[Finding] | str] = { 
