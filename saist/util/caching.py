@@ -13,7 +13,9 @@ def finding_from_json_cache(json_dict: dict[str, any]) -> Finding:
 def findings_from_cache_file(cache_file: str) -> list[Finding]:
     with open(cache_file, 'r', encoding="utf-8") as file:
         cache_json: dict[str, list[dict] | str] = json.load(file, object_hook=dict[str, list[dict] | str])
-        return [finding_from_json_cache(json_dict) for json_dict in cache_json["findings"]]
+        if cache_json["findings"] is not None: 
+            return [finding_from_json_cache(json_dict) for json_dict in cache_json["findings"]]
+    return []
 
 def store_findings_to_cache_file(filename: str, findings: list[Finding], cache_file: str):
     cache_dict: dict[str, list[Finding] | str] = { 
