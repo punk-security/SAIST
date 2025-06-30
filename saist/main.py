@@ -339,7 +339,7 @@ async def main():
                 findings_context.append(fc)
             except:
                 continue
-        l = Latex(findings_context, comment)
+        l = Latex(llm, args.project_name, findings_context, comment)
         l.run(args)
 
     if args.ci and len(all_findings) > 0:
@@ -360,7 +360,7 @@ async def process_file(scm: Scm, llm, filename, patch_text, semaphore, disable_t
                 result = findings_from_cache_file(cache_file)
         elapsed = asyncio.get_event_loop().time() - start
         if elapsed < 1:
-            await asyncio.sleep(1 - elapsed)
+            await asyncio.sleep(1 - elapsed) 
     return result
 
 async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, disable_caching, cache_folder):

@@ -14,3 +14,4 @@ class GeminiAdapter(BaseLlmAdapter):
             provider = GoogleGLAProvider( api_key=api_key )
         )
         self.model_name = self.model.model_name
+        self.model_vendor = 'Google-gla'

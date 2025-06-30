@@ -219,6 +219,11 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--project-name", type=str, help = "Project name for pdf output",
+    envvar="SAIST_PROJECT_NAME", action=EnvDefault, required=False, default=""
+    )
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",

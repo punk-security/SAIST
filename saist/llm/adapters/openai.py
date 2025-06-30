@@ -14,3 +14,4 @@ class OpenAiAdapter(BaseLlmAdapter):
             provider = OpenAIProvider( api_key=api_key )
         )
         self.model_name = self.model.model_name
+        self.model_vendor = 'OpenAI'
