@@ -11,6 +11,8 @@ logger = logging.getLogger("saist.llm.adapters")
 
 class BaseLlmAdapter:
     model_options = None
+    model_vendor = ''
+    model_name = ''
 
     def get_model_options(self):
         return {'temperature': 0.0} | self.model_options if self.model_options is not None else {}

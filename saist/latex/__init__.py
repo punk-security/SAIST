@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from models import FindingContext
+from llm.adapters import BaseLlmAdapter
 from jinja2 import Environment, FileSystemLoader
 import subprocess
 import logging
 import os
 import re
+import datetime
 
 logger = logging.getLogger("saist.latex")
 
@@ -15,6 +17,8 @@ class Latex:
     _DEFAULT_TEX_TEMPLATE = "report.tex.jinja"
     _DEFAULT_OUTPUT_DIR = "reporting"
 
+    llm: BaseLlmAdapter
+    project: str
     findings: list[FindingContext]
     comment: str
 
@@ -47,7 +51,8 @@ class Latex:
         )
         env.globals.update(escape_tex=self._escape_tex)
         template = env.get_template(self._DEFAULT_TEX_TEMPLATE)
-        return template.render({"findings": self.findings, "comment": self.comment})
+        template.globals['now'] = datetime.datetime.now().isoformat(sep=' ', timespec='minutes')
+        return template.render({"model": self.llm, "project": self.project, "findings": self.findings, "comment": self.comment})
     
     def _write_tex(self, tex_path: str):
         try:

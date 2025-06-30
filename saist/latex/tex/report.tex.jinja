@@ -7,7 +7,18 @@
     \vspace*{5cm}
     \includegraphics[width=0.4\textwidth]{\LogoTitlepage}\\[0.5cm]
 {\Huge\sffamily\bfseries\color{ColorSecondary}{AI generated code review}\\[0.75em]
-\Large\sffamily created by \href{https://github.com/punk-security/SAIST}{\textbf{SAIST}}}
+\Large\sffamily created by \href{https://github.com/punk-security/SAIST}{\textbf{SAIST}}}\\[0.75em]
+{%- if model.model_vendor is not none -%}
+\Large\sffamily\color{ColorSecondary}{{ escape_tex(model.model_vendor) }}: 
+{%- endif -%}
+\Large\sffamily\color{ColorSecondary}{{ escape_tex(model.model_name) }}
+{%- if project is not none -%}
+  \\[0.75em]
+  \Large\sffamily\color{ColorSecondary}{{ escape_tex(project) }}\\[0.75em]
+{%- endif -%}
+
+\vspace{2.5cm}
+\centering\Large\sffamily\color{ColorSecondary}{{ now }}
 
 \end{titlepage}
 

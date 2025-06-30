@@ -13,6 +13,7 @@ class FaikeAdapter(BaseLlmAdapter):
     def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None):
         self.model = model
         self.model_name = self.model
+        self.model_vendor = 'Fake AI LLM'
 
     async def prompt_structured(self, system_prompt: str, user_prompt: str, response_format: Type[BaseModel], tool_fns: Optional[List[Callable]] = None) -> BaseModel:
         logger.getChild(self.__class__.__name__).debug("prompt_structured initial response", extra={'prompt': user_prompt})
