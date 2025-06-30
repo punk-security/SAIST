@@ -80,5 +80,5 @@ class Latex:
             return specials[char]
 
         # negative look-behind makes sure we don’t double-escape something like \%
-        pattern = r'(?<!\\)[&%$_{}#~^\\]'
+        pattern = r'.(?<=[&%$_{}#~^\\])'
         return re.sub(pattern, repl, text)
