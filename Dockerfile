@@ -39,8 +39,9 @@ RUN apk add --no-cache perl curl fontconfig && \
     "./install-tl-"*"/install-tl" --location "$TL_MIRROR" -profile "/tmp/texlive.profile" && \
     rm -vf "/opt/texlive/install-tl" && \
     rm -vf "/opt/texlive/install-tl.log" && \
-    rm -vrf /tmp/*
+    rm -vrf /tmp/* \
 
+ARG BUILDARCH="x86_64"
 ENV PATH="${PATH}:/opt/texlive/bin/${BUILDARCH:-x86_64}-linuxmusl"
 
 ARG TL_PACKAGES="lineno titlesec upquote minted blindtext booktabs fontawesome latexmk parskip xcolor"
