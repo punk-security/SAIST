@@ -48,7 +48,7 @@ RUN apk add --no-cache perl curl fontconfig xz && \
     mkdir -p "/tmp/texlive" && cd "/tmp/texlive" && \
     wget "$TL_MIRROR/install-tl-unx.tar.gz" && \
     tar xzvf ./install-tl-unx.tar.gz && \
-    "./install-tl-"*"/install-tl" --location "$TL_MIRROR" --custom-bin=/tmp/texlive/bin/$TARGETARCH-linuxmusl -profile "/tmp/texlive.profile" && \
+    "./install-tl-"*"/install-tl" --location "$TL_MIRROR" --custom-bin=/tmp/texlive/bin/$(uname -m)-linuxmusl -profile "/tmp/texlive.profile" && \
     rm -vf "/opt/texlive/install-tl" && \
     rm -vf "/opt/texlive/install-tl.log" && \
     rm -vrf /tmp/*
