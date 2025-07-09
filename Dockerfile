@@ -41,7 +41,6 @@ RUN wget https://ftp.math.utah.edu/pub/texlive-utah/bin/x86_64-alpine322.tar.xz 
 FROM saist AS saist-tex
 
 ARG TL_MIRROR="https://texlive.info/CTAN/systems/texlive/tlnet"
-ARG TARGETARCH="x86_64"
 
 COPY saist/latex/texlive.profile /tmp
 COPY --from=tex-dl /opt/texlive/bin /tmp/texlive/bin
