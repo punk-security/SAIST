@@ -34,9 +34,9 @@ RUN wget https://ftp.math.utah.edu/pub/texlive-utah/bin/aarch64-alpine322.tar.xz
     tar xvf aarch64-alpine322.tar.xz && ls -ltra && \
     mv aarch64-alpine322 /opt/texlive/bin/arm64-linuxmusl
 
-RUN wget https://ftp.math.utah.edu/pub/texlive-utah/bin/x86_64-linuxmusl.tar.xz  && \
-    tar xvf x86_64-linuxmusl.tar.xz && \
-    mv x86_64-linuxmusl /opt/texlive/bin/x86_64-linuxmusl
+RUN wget https://ftp.math.utah.edu/pub/texlive-utah/bin/x86_64-alpine322.tar.xz  && \
+    tar xvf x86_64-alpine322.tar.xz && \
+    mv x86_64-alpine322 /opt/texlive/bin/x86_64-linuxmusl
 
 FROM saist AS saist-tex
 
