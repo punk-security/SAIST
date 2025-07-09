@@ -32,7 +32,7 @@ RUN mkdir -p /opt/texlive/bin
 
 RUN wget https://ftp.math.utah.edu/pub/texlive-utah/bin/aarch64-alpine322.tar.xz  && \
     tar xvf aarch64-alpine322.tar.xz && ls -ltra && \
-    mv aarch64-alpine322 /opt/texlive/bin/arm64-linuxmusl
+    mv aarch64-alpine322 /opt/texlive/bin/aarch64-linuxmusl
 
 RUN wget https://ftp.math.utah.edu/pub/texlive-utah/bin/x86_64-alpine322.tar.xz  && \
     tar xvf x86_64-alpine322.tar.xz && \
