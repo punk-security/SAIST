@@ -123,7 +123,7 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
     if args.llm == 'anthropic':
         llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: anthropic Model: {llm.model_name}")
-    if args.llm == 'bedrock':
+    elif args.llm == 'bedrock':
         llm = BedrockAdapter( api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: AWS bedrock Model: {llm.model_name}")
     elif args.llm == 'deepseek':
