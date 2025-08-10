@@ -33,7 +33,7 @@ class Latex:
             print("\n📝 Generating PDF report...")
 
             rc = subprocess.run(
-                ["latexmk", "-pdf", f"-outdir={self._DEFAULT_OUTPUT_DIR}", tex_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
+                ["latexmk", "-pdf", "-f", "-interaction=nonstopmode", f"-outdir={self._DEFAULT_OUTPUT_DIR}", tex_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
             ).returncode
 
             if rc != 0:
