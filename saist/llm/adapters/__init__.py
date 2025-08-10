@@ -21,14 +21,14 @@ class BaseLlmAdapter:
         tools = [Tool(fn) for fn in tool_fns] if tool_fns else []
         agent = Agent(self.model, output_type = response_format, tools=tools, system_prompt=system_prompt)
         response = await agent.run( user_prompt=user_prompt, model_settings=self.get_model_options())
-        logger.getChild(self.__class__.__name__).debug("prompt_structured response", extra={'response_data': response.data, 'prompt': user_prompt})
+        logger.getChild(self.__class__.__name__).debug("prompt_structured response", extra={'response_data': response.output, 'prompt': user_prompt})
         return response.output
 
     async def prompt(self, system_prompt: str, user_prompt: str, tool_fns: Optional[List[Callable]] = None) -> str | None:
         tools = [Tool(fn) for fn in tool_fns] if tool_fns else []
         agent = Agent(self.model, system_prompt=system_prompt, tools=tools)
         response = await agent.run(user_prompt=user_prompt, model_settings=self.get_model_options())
-        logger.getChild(self.__class__.__name__).debug("prompt response", extra={'response_data': response.data, 'prompt': user_prompt})
+        logger.getChild(self.__class__.__name__).debug("prompt response", extra={'response_data': response.output, 'prompt': user_prompt})
         return response.output
     
     def generate_agent(self, system_prompt: str = None, tool_fns: Optional[List[Callable]] = None):
