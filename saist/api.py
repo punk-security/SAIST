@@ -3,13 +3,14 @@ import glob
 import os.path
 import pathlib
 import re
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 import pydantic
 from pydantic_ai import Agent
+from pydantic_ai.usage import UsageLimits
 
-from .main import _get_llm_adapter
-from .llm.adapters import BaseLlmAdapter
+from main import _get_llm_adapter
+from llm.adapters import BaseLlmAdapter
 
 workdir = os.path.curdir
 
@@ -46,28 +47,34 @@ def find_in_file(filename: str, regex_patterns: list[str]) -> list[FindFileResul
     """
 
     print("Finding in", filename, "regex pattern", regex_patterns)
-    if pathlib.Path(filename).is_dir():
-        return []
-
     results = []
-    with open(os.path.join(workdir, filename), "r") as file:
-        for pattern in regex_patterns:
-            results.append(FindFileResults(filename=filename, results=re.findall(pattern, file.read())))
 
+    try:
+        if pathlib.Path(filename).is_dir():
+            return []
+
+        with open(os.path.join(workdir, filename), "r") as file:
+            for pattern in regex_patterns:
+                results.append(FindFileResults(filename=filename, results=re.findall(pattern, file.read())))
+    except Exception as e:
+        print(e)
     return results
 
-def find_in_files(filenames: list[str], regex_patterns: list[str]) -> list[FindFileResults]:
+def find_in_files(pattern: str, regex_patterns: List[str]) -> List[FindFileResults]:
     """
-    Finds occurrences of the specified patterns in a list of filenames.
-    Glob is NOT supported.
-    :param filenames: A list of absolute paths to files to scan
+    Finds occurrences of the specified patterns in files matching a glob pattern.
+
+    :param pattern: A glob pattern (e.g., '/path/to/files/*.txt') to match files
     :param regex_patterns: The patterns to match against
-    :return:
+    :return: A list of FindFileResults for all matching files
     """
-    print("Finding in files", filenames, "with patterns", regex_patterns)
+    print("Finding in files matching", pattern, "with patterns", regex_patterns)
     results = []
-    for filename in filenames:
-        results += find_in_file(filename, regex_patterns)
+    try:
+        for filename in glob.glob(pattern, recursive=True):
+            results += find_in_file(filename, regex_patterns)
+    except Exception as e:
+        print(e)
 
     return results
 
@@ -102,6 +109,7 @@ class Api:
         result = await self._agent.run(
             user_prompt=user_prompt,
             message_history=self._messages,
+            usage_limits=UsageLimits(request_limit=500)
         )
 
         self._messages = result.all_messages()
