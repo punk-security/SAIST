@@ -21,7 +21,7 @@ from scm.adapters.filesystem import FilesystemAdapter
 from scm import BaseScmAdapter
 from scm.adapters.git import GitAdapter
 from util.git import parse_unified_diff
-from util.filtering import filename_included, file_exceeds_line_length_limit
+from util.filtering import FilterRules
 from util.prompts import prompts
 from scm.adapters.github import Github
 from scm import Scm
@@ -195,6 +195,7 @@ async def main():
     file_new_lines_text = {}
     app_files = []
 
+    filter_rules = FilterRules(args.include, args.exclude)
     for f in changed_files:
         filename = f["filename"]
         patch_text = f.get("patch", "")
@@ -202,12 +203,12 @@ async def main():
             logging.debug(f"Skipped file {filename} as it contains no patch text")
             continue 
 
-        if not filename_included(filename):
+        if not filter_rules.filename_included(filename):
             logging.debug(f"Skipped file {filename} as it is not included in rules")
             continue
 
         if not args.skip_line_length_check:
-            if file_exceeds_line_length_limit(file_content=await scm.read_file_contents(filename), patch_text=patch_text, max_line_length=args.max_line_length):
+            if filter_rules.file_exceeds_line_length_limit(file_content=await scm.read_file_contents(filename), patch_text=patch_text, max_line_length=args.max_line_length):
                 logging.debug(f"Skipped file {filename} as it contains lines that exceed the maximum line length ({args.max_line_length})")
                 continue
 
@@ -220,6 +221,10 @@ async def main():
         print("⚠️ No app code diffs to analyze. Exiting.")
         return
     print(f"✅ Prepared {len(app_files)} app files for analysis.\n")
+
+    dbg_filenames = list((i for i,_ in app_files))
+    print(f"{dbg_filenames}")
+    exit()
 
     # 3) Analyze each file in parallel
     print("🔍 Analyzing files for security issues...")

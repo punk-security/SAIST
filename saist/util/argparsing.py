@@ -236,6 +236,14 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    '-i', '--include', action='append', help = "Pattern or filename to explicitly include, overrides saist.ignore", nargs=1, required=False
+)
+
+parser.add_argument(
+    '-e', '--exclude', action='append', help = "Pattern or filename to explicitly ignore, overrides saist.include", nargs=1, required=False
+)
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",
