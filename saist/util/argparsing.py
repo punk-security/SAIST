@@ -2,7 +2,9 @@ import argparse
 from os import linesep, environ, cpu_count
 import sys
 from shutil import which
+from dotenv import load_dotenv
 
+load_dotenv(".env")
 
 runtime = environ.get("SAIST_COMMAND", f"{sys.argv[0]}")
 
