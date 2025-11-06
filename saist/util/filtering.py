@@ -1,8 +1,7 @@
 import logging
-import os
-import fnmatch
+from pathlib import Path
+from gitignore_parser import parse_gitignore_str
 
-#TODO: Make this recognise more gitignore patterns, like simple directory matching with /
 #TODO: Document in README
 
 DEFAULT_EXTENSIONS = [
@@ -16,17 +15,19 @@ DEFAULT_EXTENSIONS = [
 logger = logging.getLogger(__name__)
 
 class FilterRules:
-    def __init__(self, include_patterns: list, exclude_patterns: list, include_rules_file: str = "saist.include", exclude_rules_file: str = "saist.ignore"):
+    def __init__(self, include_patterns: list, exclude_patterns: list, include_rules_file: str | Path = "saist.include", exclude_rules_file: str | Path = "saist.ignore"):
         """
         Load include/exclude rules from disk and command-line arguments
         """
         # Load initial rules from disk
-        self.include_patterns = self.__load_patterns(include_rules_file)
-        self.exclude_patterns = self.__load_patterns(exclude_rules_file)
+        self.include_patterns = self.__load_rule_file(include_rules_file)
+        self.exclude_patterns = self.__load_rule_file(exclude_rules_file)
+
+        logger.debug(f"Processing inclusion rules from {include_rules_file} and exclusion rules from {exclude_rules_file}")
 
         if not self.include_patterns:
             # If no rules in saist.include, fallback to extension-based glob patterns like **/*.py
-            logging.debug("No include arguments provided and no saist.include, using defaults")
+            logger.debug("No saist.include, using defaults")
             self.include_patterns = [f"*{ext}" for ext in DEFAULT_EXTENSIONS]
 
         # Extend list of patterns loaded from disk / defaults with additional patterns from CLI arguments
@@ -39,31 +40,24 @@ class FilterRules:
         
         logger.debug(f"include_patterns: {self.include_patterns}\nignore_patterns:{self.exclude_patterns}")
 
-    def __load_patterns(self, filename: str) -> list:
+        # Convert include/exclude pattern lists into a gitignore format for parsing with gitignore_parser
+        exclude_gitignore_str = "\n".join(self.exclude_patterns)
+        include_gitignore_str = "\n".join(self.include_patterns)
+
+        # Define functions for checking filenames against exclusion/inclusion lists in gitignore format
+        self.__exclusion_matches = parse_gitignore_str(exclude_gitignore_str, base_dir=Path(exclude_rules_file).parent)
+        self.__inclusion_matches = parse_gitignore_str(include_gitignore_str, base_dir=Path(include_rules_file).parent)
+
+    def __load_rule_file(self, file_path: str | Path):
         """
-        Loads glob-style patterns from a file.
-        Returns a list of patterns.
+        Load a exclude/include file from disk
         """
-        if not os.path.exists(filename):
+        file_path = Path(file_path)
+        if file_path.exists():
+            with open(file_path, 'r') as fp:
+                return fp.readlines()
+        else:
             return []
-
-        logger.debug(f"load_patterns: Found {filename}, processing...")
-        with open(filename, "r") as f:
-            lines = f.readlines()
-
-        return [
-            line.strip()
-            for line in lines
-            if line.strip() and not line.strip().startswith("#")
-        ]
-
-    def __pattern_match(self, filepath: str, patterns: list) -> bool:
-        """
-        Check if filename matches any provided patterns
-        Returns True if any match.
-        """
-        normalized_path = filepath.replace("\\", "/")
-        return any(fnmatch.fnmatch(normalized_path, pattern) for pattern in patterns)
 
     def file_exceeds_line_length_limit(self, file_content: str, patch_text: str, max_line_length: int = 1000) -> bool:
         """
@@ -84,9 +78,9 @@ class FilterRules:
         """
         Returns True if the file is included in includelist and not explicitly ignored in ignorelist.
         """
-        if not self.__pattern_match(filepath, self.include_patterns):
+        if self.__exclusion_matches(filepath):
             return False
-        if self.__pattern_match(filepath, self.exclude_patterns):
+        if not self.__inclusion_matches(filepath):
             return False
             
         return True
