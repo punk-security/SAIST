@@ -222,9 +222,12 @@ async def main():
         return
     print(f"✅ Prepared {len(app_files)} app files for analysis.\n")
 
-    dbg_filenames = list((i for i,_ in app_files))
-    print(f"{dbg_filenames}")
-    exit()
+    app_filenames = list((filename for filename,_ in app_files))
+    logging.debug(f"Files to process: {app_filenames}")
+
+    if args.dry_run:
+        print("⚠️  --dry-run flag passed, exiting without analyzing files.")
+        exit(0)
 
     # 3) Analyze each file in parallel
     print("🔍 Analyzing files for security issues...")

@@ -244,6 +244,11 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--dry-run", help = "Exit after parsing configuration and collecting files, does not perform any analysis. Useful for validating rules.",
+    action='store_true', required=False
+    )
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",
