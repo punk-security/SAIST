@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 class FilterRules:
     def __init__(self, include_patterns: list, exclude_patterns: list, include_rules_file: str = "saist.include", exclude_rules_file: str = "saist.ignore"):
+        """
+        Load include/exclude rules from disk and command-line arguments
+        """
         # Load initial rules from disk
         self.include_patterns = self.__load_patterns(include_rules_file)
         self.exclude_patterns = self.__load_patterns(exclude_rules_file)
@@ -36,7 +39,7 @@ class FilterRules:
         
         logger.debug(f"include_patterns: {self.include_patterns}\nignore_patterns:{self.exclude_patterns}")
 
-    def __load_patterns(self, filename: str):
+    def __load_patterns(self, filename: str) -> list:
         """
         Loads glob-style patterns from a file.
         Returns a list of patterns.
@@ -54,11 +57,15 @@ class FilterRules:
             if line.strip() and not line.strip().startswith("#")
         ]
 
-    def __pattern_match(self, filepath, patterns):
+    def __pattern_match(self, filepath: str, patterns: list) -> bool:
+        """
+        Check if filename matches any provided patterns
+        Returns True if any match.
+        """
         normalized_path = filepath.replace("\\", "/")
         return any(fnmatch.fnmatch(normalized_path, pattern) for pattern in patterns)
 
-    def file_exceeds_line_length_limit(self, file_content: str, patch_text: str, max_line_length: int = 1000):
+    def file_exceeds_line_length_limit(self, file_content: str, patch_text: str, max_line_length: int = 1000) -> bool:
         """
         Checks if any line in the file exceeds max_length.
         Returns True if all lines are within the limit, False otherwise.
@@ -73,7 +80,7 @@ class FilterRules:
 
         return False
 
-    def filename_included(self, filepath: str):
+    def filename_included(self, filepath: str) -> bool:
         """
         Returns True if the file is included in includelist and not explicitly ignored in ignorelist.
         """
