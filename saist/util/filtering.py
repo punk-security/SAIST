@@ -38,15 +38,34 @@ def pattern_match(filepath, patterns):
     normalized_path = filepath.replace("\\", "/")
     return any(fnmatch.fnmatch(normalized_path, pattern) for pattern in patterns)
 
-def should_process(filepath):
+#             if file_exceeds_line_length_limit(file_content=scm.read_file_contents(), patch_text=patch_text, max_line_length=args.max_line_length):
+
+def file_exceeds_line_length_limit(file_content: str, patch_text: str, max_line_length: int = 1000):
     """
-    Returns True if the file should be processed (included AND not ignored).
+    Checks if any line in the file exceeds max_length.
+    Returns True if all lines are within the limit, False otherwise.
     """
+    for line in file_content.splitlines():
+        if len(line) > max_line_length:
+            return True
+        
+    for line in patch_text.splitlines():
+        if len(line) > max_line_length:
+            return True
+
+    return False
+
+def filename_included(filepath: str):
+    """
+    Returns True if the file is included in includelist and not explicitly ignored in ignorelist.
+    """
+    # Check include/ignore rules
     logger.debug(f"should_process: {filepath}")
     if not pattern_match(filepath, include_patterns):
         return False
     if pattern_match(filepath, ignore_patterns):
         return False
+           
     return True
 
 include_patterns = load_patterns("saist.include")
