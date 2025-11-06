@@ -105,6 +105,12 @@ saist respects **file include/exclude rules** via two optional files in the root
     - `src/**/*.ts` includes TypeScript files inside `src`
     - `tests/**` in `saist.ignore` will ignore the entire tests folder
 
+You can also provide include/exclude patterns using the command-line arguments `--include` and `--exclude`.
+- Patterns provided via command-line arguments are appended to any patterns loaded from the rule files.
+- Examples:
+    - `--include '**/*.py' --include '**/*.ts'` includes all Python and TypeScript files
+    - `--include '**/*.py' --exclude 'tests/**'` includes all Python files except those in the `tests/` folder
+
 > Note: saist currently does basic glob pattern matching. More advanced `.gitignore`-style support is coming soon!
 ---
 
@@ -127,6 +133,7 @@ This setup will:
 - Only scan `.py`, `.ts`, and specific `.js` files
 - Ignore anything under `tests/` and `docs/`
 ---
+
 
 ## 📄 PDF report generation
 
@@ -171,6 +178,9 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 | `--disable-caching` | Disable finding caching during file analysis |
 | `--skip-line-length-check` | Skip checking files for a maximum line length |
 | `--max-line-length` | Maximum allowed line length, files with lines longer than this value will be skipped |
+| `--i, --include` | Pattern to explicitly include |
+| `--e, --exclude` | Pattern to explicitly ignore |
+| `--dry-run` | Exit after parsing configuration and collecting files, does not perform any analysis, useful for validating rules |
 | `--cache-folder` | Change the default cache folder |
 | `--csv` | Output findings to `findings.csv` |
 | `--pdf` | Output findings to PDF report (`report.pdf`) |
