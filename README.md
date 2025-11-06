@@ -169,6 +169,8 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
 | `--disable-caching` | Disable finding caching during file analysis |
+| `--skip-line-length-check` | Skip checking files for a maximum line length |
+| `--max-line-length` | Maximum allowed line length, files with lines longer than this value will be skipped |
 | `--cache-folder` | Change the default cache folder |
 | `--csv` | Output findings to `findings.csv` |
 | `--pdf` | Output findings to PDF report (`report.pdf`) |
