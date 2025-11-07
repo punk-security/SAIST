@@ -36,6 +36,8 @@ from util.prompts import prompts
 
 from web import FindingsServer
 
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn, TimeElapsedColumn, MofNCompleteColumn
+
 prompts = prompts()
 load_dotenv(".env")
 
@@ -388,10 +390,25 @@ async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, 
     
     semaphore = asyncio.Semaphore(max_concurrent)
 
-    tasks = [
-        process_file(scm, llm, filename, patch_text, semaphore, disable_tools, disable_caching, cache_folder)
-        for filename, patch_text in app_files
-    ]
+    progress = Progress(SpinnerColumn(), TextColumn("[bold blue]{task.description}"), BarColumn(), MofNCompleteColumn(), TimeElapsedColumn(), TimeRemainingColumn())
+    progress.start()
+
+    async def task_progress_wrapper(should_stop, func, *args, **kwargs):
+        task_result = await func(*args, **kwargs)
+        progress.update(task, advance=1)
+        if should_stop:
+            progress.stop()
+        return task_result
+
+    tasks = []
+    last_filename, _ = app_files[-1]
+    task = progress.add_task(f"Processing files...", total=len(app_files)) # Add a task
+    for filename, patch_text in app_files:
+        should_stop = bool(filename == last_filename)
+        wrapper_func = task_progress_wrapper(should_stop, process_file, scm, llm, filename, patch_text, semaphore, disable_tools, disable_caching, cache_folder)
+        tasks.append(
+            wrapper_func
+        )
 
     all_findings = []
     results = await asyncio.gather(*tasks)
