@@ -394,7 +394,7 @@ async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, 
 
     async def task_progress_wrapper(should_stop, func, *args, **kwargs):
         task_result = await func(*args, **kwargs)
-        progress.update(task, advance=1)
+        progress.update(task, advance=1, description=f"Analyzing {filename} (diff size: {len(patch_text)})...")
         if should_stop:
             progress.stop()
         return task_result
@@ -410,7 +410,10 @@ async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, 
         )
 
     all_findings = []
-    results = await asyncio.gather(*tasks)
+    try:
+        results = await asyncio.gather(*tasks)
+    finally:
+        progress.stop()
 
     for result in results:
         if result:
