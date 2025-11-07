@@ -2,39 +2,39 @@
 import asyncio
 import logging
 import os
-
 from typing import Optional
 
 from dotenv import load_dotenv
-
-from llm.adapters import BaseLlmAdapter
-from llm.adapters.deepseek import DeepseekAdapter
-from llm.adapters.gemini import GeminiAdapter
-from llm.adapters.openai import OpenAiAdapter
-from llm.adapters.ollama import OllamaAdapter
-from llm.adapters.faike import FaikeAdapter
-from models import FindingContext, FindingEnriched, Finding, Findings
-from llm.adapters.anthropic import AnthropicAdapter
-from llm.adapters.bedrock import BedrockAdapter
-from web import FindingsServer
-from scm.adapters.filesystem import FilesystemAdapter
-from scm import BaseScmAdapter
-from scm.adapters.git import GitAdapter
-from util.git import parse_unified_diff
-from util.filtering import FilterRules
-from util.prompts import prompts
-from scm.adapters.github import Github
-from scm import Scm
-from shell import Shell
 from latex import Latex
 
+from llm.adapters import BaseLlmAdapter
+from llm.adapters.anthropic import AnthropicAdapter
+from llm.adapters.bedrock import BedrockAdapter
+from llm.adapters.deepseek import DeepseekAdapter
+from llm.adapters.faike import FaikeAdapter
+from llm.adapters.gemini import GeminiAdapter
+from llm.adapters.ollama import OllamaAdapter
+from llm.adapters.openai import OpenAiAdapter
+
+from models import Finding, FindingContext, FindingEnriched, Findings
+
+from scm import BaseScmAdapter, Scm
+from scm.adapters.filesystem import FilesystemAdapter
+from scm.adapters.git import GitAdapter
+from scm.adapters.github import Github
+
+from shell import Shell
+
 from util.argparsing import parse_args
-
-from util.poem import poem
-
-from util.output import print_banner, write_csv
-
 from util.caching import *
+from util.filtering import FilterRules
+from util.git import parse_unified_diff
+from util.output import print_banner, write_csv
+from util.poem import poem
+from util.progress import Progress
+from util.prompts import prompts
+
+from web import FindingsServer
 
 prompts = prompts()
 load_dotenv(".env")
