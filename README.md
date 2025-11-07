@@ -95,17 +95,23 @@ saist respects **file include/exclude rules** via two optional files in the root
 
 | File              | Purpose                            |
 | ----------------- | ---------------------------------- |
-| `saist.include`    | List of glob patterns to **include** |
-| `saist.ignore`     | List of glob patterns to **ignore** |
+| `saist.include`   | List of `.gitignore`-style patterns to **include** |
+| `saist.ignore`    | List of `.gitignore`-style patterns to **ignore** |
 
-- Patterns follow `glob` syntax (similar to `.gitignore`).
+- Patterns follow `.gitignore` syntax.
 - If **`saist.include`** does not exist, default extensions are used (e.g., `.py`, `.js`, `.java`, `.go`, etc).
 - Examples:
     - `**/*.py` includes all Python files
     - `src/**/*.ts` includes TypeScript files inside `src`
-    - `tests/**` in `saist.ignore` will ignore the entire tests folder
+    - `build/` will ignore the entire build folder
+    - `*.log` will ignore all log files
 
-> Note: saist currently does basic glob pattern matching. More advanced `.gitignore`-style support is coming soon!
+You can also provide include/exclude patterns using the command-line arguments `--include` and `--exclude`.
+- Patterns provided via command-line arguments are appended to any patterns loaded from the rule files.
+- Examples:
+    - `--include '**/*.py' --include '**/*.ts'` includes all Python and TypeScript files
+    - `--include '**' --exclude '*.log'` includes all files except those ending in `.log`
+    - `--exclude 'node_modules/'` excludes the entire `node_modules` directory
 ---
 
 ### 📝 Example
@@ -119,14 +125,15 @@ src/**/*.js
 
 `saist.ignore`
 ```
-tests/**
-docs/**
+tests/
+docs/
 ```
 
 This setup will:
 - Only scan `.py`, `.ts`, and specific `.js` files
 - Ignore anything under `tests/` and `docs/`
 ---
+
 
 ## 📄 PDF report generation
 
@@ -169,6 +176,11 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
 | `--disable-caching` | Disable finding caching during file analysis |
+| `--skip-line-length-check` | Skip checking files for a maximum line length |
+| `--max-line-length` | Maximum allowed line length, files with lines longer than this value will be skipped |
+| `--i, --include` | Pattern to explicitly include |
+| `--e, --exclude` | Pattern to explicitly ignore |
+| `--dry-run` | Exit after parsing configuration and collecting files, does not perform any analysis, useful for validating rules |
 | `--cache-folder` | Change the default cache folder |
 | `--csv` | Output findings to `findings.csv` |
 | `--pdf` | Output findings to PDF report (`report.pdf`) |

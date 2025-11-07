@@ -2,7 +2,9 @@ import argparse
 from os import linesep, environ, cpu_count
 import sys
 from shutil import which
+from dotenv import load_dotenv
 
+load_dotenv(".env")
 
 runtime = environ.get("SAIST_COMMAND", f"{sys.argv[0]}")
 
@@ -221,6 +223,29 @@ parser.add_argument(
 parser.add_argument(
     "--project-name", type=str, help = "Project name for pdf output",
     envvar="SAIST_PROJECT_NAME", action=EnvDefault, required=False, default=None
+    )
+
+parser.add_argument(
+    "--skip-line-length-check", help = "Skip checking files for a maximum line length",
+    action='store_true', required=False
+    )
+
+parser.add_argument(
+    "--max-line-length", type=int, help = "Maximum allowed line length, files with lines longer than this value will be skipped",
+    required=False, default=1000
+    )
+
+parser.add_argument(
+    '-i', '--include', action='append', help = "Pattern or filename to explicitly include, overrides saist.ignore", nargs=1, required=False
+)
+
+parser.add_argument(
+    '-e', '--exclude', action='append', help = "Pattern or filename to explicitly ignore, overrides saist.include", nargs=1, required=False
+)
+
+parser.add_argument(
+    "--dry-run", help = "Exit after parsing configuration and collecting files, does not perform any analysis. Useful for validating rules.",
+    action='store_true', required=False
     )
 
 parser.add_argument(
