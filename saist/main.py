@@ -31,7 +31,6 @@ from util.filtering import FilterRules
 from util.git import parse_unified_diff
 from util.output import print_banner, write_csv
 from util.poem import poem
-from util.progress import Progress
 from util.prompts import prompts
 
 from web import FindingsServer
