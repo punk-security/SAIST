@@ -59,6 +59,23 @@ async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch
         logger.error(f"[Error] File '{filename}': {e}")
         return None
 
+
+async def check_single_finding(scm: Scm, adapter: BaseLlmAdapter, finding: Finding):
+    """
+    Checks a single finding against the file
+    """
+    breakpoint()
+    file_content = await(scm.read_file_contents(finding.file))
+    system_prompt = prompts.CHECK_FINDING
+    logger.debug(f"Confirming {finding.issue} for {finding.file}")
+    prompt = f"\n\nReport:\n{finding.issue}\n\nFile: {finding.file}\n{file_content}"
+    try:
+        return await adapter.prompt(system_prompt, prompt)
+    except Exception as e:
+        logger.error(f"[Error] Finding '{finding}': {e}")
+        return None
+
+
 async def context_from_finding(scm: Scm, finding: Finding, context_size: int = 3) -> Optional[list]:
     """
 
@@ -78,6 +95,7 @@ async def context_from_finding(scm: Scm, finding: Finding, context_size: int = 3
         context.append(lines[ln - 1])
 
     return "\n".join(context), start, end
+
 
 def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Finding]) -> str:
     """
@@ -284,12 +302,24 @@ async def main():
             continue
 
         diff_position = line_map[matched_new_line]
+
+        item.line_number = matched_new_line
+
+        senior_reviewer_feedback = await check_single_finding(
+            scm=scm,
+            adapter=llm,
+            finding = item
+        )
+
+        # breakpoint()
+
         body_text = (
             f"**Security Issue:** {issue}\n\n"
             f"**Priority:** {priority}\n\n"
             f"**CWE:** {cwe}\n\n"
             f"**Recommendation:** {recommendation or 'None provided.'}\n\n"
             f"**Snippet**: `{snippet}`\n\n"
+            f"**Reviewer feedback**:\n{senior_reviewer_feedback}\n\n"
         )
 
         review_comments.append({
@@ -298,7 +328,9 @@ async def main():
             "body": body_text
         })
 
-        item.line_number = matched_new_line
+
+
+        
 
     all_findings = list([x for x in all_findings if x.line_number != -1])
 

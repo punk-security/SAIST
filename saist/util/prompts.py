@@ -1,4 +1,4 @@
-class prompts():
+class prompts:
     SUMMARY_PRE = """
     You are a senior application security engineer.
     Given the following list of findings (issue descriptions and recommendations)
@@ -21,12 +21,30 @@ class prompts():
     Provide a vulnerability priority between 1 and 9. 9 is most critical
     Map each finding to a Common Weakness Enumeration ID (CWE).
     """
-    DETECT_POST = """"
+    DETECT_POST = """
         Below is the diff for this single file. It starts with 'File: <filename>' followed by the unified diff.\n"
     """
+
+    CHECK_FINDING_PRE = """
+    You are a senior application security engineer.
+    You have been given a report on a security issue in a file from a junior security engineer.
+    Comparet the report to the file, and state if the report is accurate or not.
+    Provde some short feedback.
+    """
+    CHECK_FINDING_POST = """
+    Below is the report and the file.
+    The report starts with 'Report:' followed by the report.
+    The file starts with 'File: <filename>' followed by the content of the file.
+    """
+
     @property
     def SUMMARY(self):
         return self.SUMMARY_PRE + self.SUMMARY_POST
+
     @property
     def DETECT(self):
         return self.DETECT_PRE + self.DETECT_POST
+
+    @property
+    def CHECK_FINDING(self):
+        return self.CHECK_FINDING_PRE + self.CHECK_FINDING_POST
