@@ -2,13 +2,22 @@ from pydantic import BaseModel, Field
 from typing import Annotated
 from json import JSONEncoder
 
+
 class Finding(BaseModel):
     file: str
-    snippet: Annotated[str, Field(description= "a single line code snipper containing the security issue") ]
-    title: Annotated[str, Field(description= "a short title describing the issue") ]
+    snippet: Annotated[
+        str,
+        Field(description="a single line code snipper containing the security issue"),
+    ]
+    title: Annotated[str, Field(description="a short title describing the issue")]
     issue: str
     recommendation: str
-    cwe: Annotated[str, Field(description= "CWE id, should conform to CWE-XX or CWE-XXX where X is a number") ]
+    cwe: Annotated[
+        str,
+        Field(
+            description="CWE id, should conform to CWE-XX or CWE-XXX where X is a number"
+        ),
+    ]
     priority: int
     line_number: int
     feedback: str | None
@@ -32,4 +41,4 @@ class FindingEnriched(Finding):
 class FindingContext(Finding):
     context: str
     context_start: int
-    context_end: int    context_end: int    context_end: int    context_end: int
+    context_end: int
