@@ -11,6 +11,8 @@ class Finding(BaseModel):
     cwe: Annotated[str, Field(description= "CWE id, should conform to CWE-XX or CWE-XXX where X is a number") ]
     priority: int
     line_number: int
+    feedback: str | None
+
 
 class FindingJSONEncoder(JSONEncoder):
     def default(self, obj):
@@ -18,13 +20,16 @@ class FindingJSONEncoder(JSONEncoder):
             return obj.__dict__
         return super().default(object)
 
+
 class Findings(BaseModel):
     findings: list[Finding]
+
 
 class FindingEnriched(Finding):
     file_contents: str
 
+
 class FindingContext(Finding):
     context: str
     context_start: int
-    context_end: int
+    context_end: int    context_end: int    context_end: int    context_end: int
