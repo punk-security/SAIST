@@ -7,9 +7,11 @@ import random
 from util.argparsing import banner
 from models import Finding
 
+
 def print_banner():
     console = Console(width=120)
     console.print(banner)
+
 
 def write_findings(comment, review_comments, request_changes):
     console = Console(width=120)
@@ -29,9 +31,10 @@ def write_findings(comment, review_comments, request_changes):
             console.print(Markdown("---"))
         pass
 
+
 def write_csv(findings: Iterable[Finding], csv_path: str):
-    fieldnames = list(Finding.model_json_schema()["properties"].keys())
-    
+    fieldnames = list(type(findings[0]).model_json_schema()["properties"].keys())
+
     with open(csv_path, "w", newline="") as fp:
         writer = csv.DictWriter(fp, fieldnames=fieldnames)
         writer.writeheader()

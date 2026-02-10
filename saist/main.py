@@ -18,7 +18,14 @@ from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.ollama import OllamaAdapter
 from llm.adapters.openai import OpenAiAdapter
 
-from models import Finding, FindingContext, FindingEnriched, Findings, Check
+from models import (
+    CheckedFinding,
+    Finding,
+    FindingContext,
+    FindingEnriched,
+    Findings,
+    Check,
+)
 
 from scm import BaseScmAdapter, Scm
 from scm.adapters.filesystem import FilesystemAdapter
@@ -83,7 +90,7 @@ async def analyze_single_file(
 
 async def check_single_finding(
     scm: Scm, adapter: BaseLlmAdapter, finding: Finding
-) -> Finding:
+) -> CheckedFinding | Finding:
     """
     Checks a single finding against the file
     """
@@ -93,8 +100,8 @@ async def check_single_finding(
     prompt = f"\n\nReport:\n{finding.issue}\n\nFile: {finding.file}\n{file_content}"
     try:
         feedback = await adapter.prompt_structured(system_prompt, prompt, Check)
-        new_finding = copy(finding)
-        new_finding.check = feedback
+        args = dict(finding) | dict(feedback)
+        new_finding = CheckedFinding(**args)
         return new_finding
     except Exception as e:
         logger.error(f"[Error] Finding '{finding}': {e}")
@@ -392,7 +399,9 @@ async def main():
 
     print(f"{len(all_findings)} before LLM checks")
 
-    all_findings = [f for f in all_findings if f.check and f.check.is_accurate]
+    all_findings = [
+        f for f in all_findings if isinstance(f, CheckedFinding) and f.is_accurate
+    ]
 
     print(f"{len(all_findings)} after LLM checks")
 

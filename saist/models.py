@@ -25,7 +25,6 @@ class Finding(BaseModel):
     ]
     priority: int
     line_number: int
-    check: Check | None = None
 
 
 class FindingJSONEncoder(JSONEncoder):
@@ -47,3 +46,8 @@ class FindingContext(Finding):
     context: str
     context_start: int
     context_end: int
+
+
+class CheckedFinding(Finding):
+    is_accurate: bool
+    feedback: str
