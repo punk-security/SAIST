@@ -101,24 +101,13 @@ async def check_single_finding(
         return finding
 
 
-def batched(iterable, n, *, strict=False):
-    # batched('ABCDEFG', 3) → ABC DEF G
-    if n < 1:
-        raise ValueError("n must be at least one")
-    iterator = iter(iterable)
-    while batch := tuple(islice(iterator, n)):
-        if strict and len(batch) != n:
-            raise ValueError("batched(): incomplete batch")
-        yield batch
-
-
-# TODO: make this nice
-async def check_batch_findings(
+async def check_all_findings(
     scm: Scm,
     adapter: BaseLlmAdapter,
     findings: list[Finding],
     max_concurrent: int,
 ) -> list[Finding]:
+    logger.info(f"Confirming {len(findings)}")
     semaphore = asyncio.Semaphore(max_concurrent)
     tasks = [check_single_finding(scm, adapter, finding) for finding in findings]
     results = []
@@ -397,7 +386,7 @@ async def main():
         print("No issues detected")
         exit(0)
 
-    all_findings = await check_batch_findings(
+    all_findings = await check_all_findings(
         scm=scm, adapter=llm, findings=all_findings, max_concurrent=args.llm_rate_limit
     )
 
