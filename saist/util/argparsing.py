@@ -371,7 +371,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--skip-llm-check",
+    "--disable-llm-check",
     help="If present, skip the LLM-based confirmation",
     type=bool,
     action="store_true",

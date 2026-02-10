@@ -393,17 +393,21 @@ async def main():
         print("No issues detected")
         exit(0)
 
-    all_findings = await check_all_findings(
-        scm=scm, adapter=llm, findings=all_findings, max_concurrent=args.llm_rate_limit
-    )
+    if not args.disable_llm_check:
+        all_findings = await check_all_findings(
+            scm=scm,
+            adapter=llm,
+            findings=all_findings,
+            max_concurrent=args.llm_rate_limit,
+        )
 
-    print(f"{len(all_findings)} before LLM checks")
+        print(f"{len(all_findings)} before LLM checks")
 
-    all_findings = [
-        f for f in all_findings if isinstance(f, CheckedFinding) and f.is_accurate
-    ]
+        all_findings = [
+            f for f in all_findings if isinstance(f, CheckedFinding) and f.is_accurate
+        ]
 
-    print(f"{len(all_findings)} after LLM checks")
+        print(f"{len(all_findings)} after LLM checks")
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)
