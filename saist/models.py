@@ -49,5 +49,10 @@ class FindingContext(Finding):
 
 
 class CheckedFinding(Finding):
-    is_accurate: bool
+    is_accurate: Annotated[
+        bool,
+        Field(
+            description="Should be True if the report is accurate, False if the report is inaccurate"
+        ),
+    ]
     feedback: str
