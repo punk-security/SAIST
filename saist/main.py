@@ -119,18 +119,12 @@ async def check_batch_findings(
     findings: list[Finding],
     max_concurrent: int,
 ) -> list[Finding]:
-
+    semaphore = asyncio.Semaphore(max_concurrent)
     tasks = [check_single_finding(scm, adapter, finding) for finding in findings]
-    batched_tasks = batched(tasks, max_concurrent)
     results = []
-    running_total = 0
-    for batch in batched_tasks:
-        print(f"Checking findings {running_total} to {running_total + len(batch)}")
-        running_total += len(batch)
-        async with asyncio.TaskGroup() as tg:
-            batch_results = [tg.create_task(task) for task in batch]
-        results += batch_results
-    return [r.result() for r in results]
+    async with semaphore:
+        results = await asyncio.gather(*tasks)
+    return results
 
 
 async def context_from_finding(
