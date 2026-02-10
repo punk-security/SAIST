@@ -3,6 +3,11 @@ from typing import Annotated
 from json import JSONEncoder
 
 
+class Check(BaseModel):
+    is_accurate: bool
+    feedback: str
+
+
 class Finding(BaseModel):
     file: str
     snippet: Annotated[
@@ -20,7 +25,7 @@ class Finding(BaseModel):
     ]
     priority: int
     line_number: int
-    feedback: str | None
+    check: Check | None = None
 
 
 class FindingJSONEncoder(JSONEncoder):
@@ -42,8 +47,3 @@ class FindingContext(Finding):
     context: str
     context_start: int
     context_end: int
-
-
-class Check(BaseModel):
-    is_accurate: bool
-    feedback: str

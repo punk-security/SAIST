@@ -18,7 +18,7 @@ from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.ollama import OllamaAdapter
 from llm.adapters.openai import OpenAiAdapter
 
-from models import Finding, FindingContext, FindingEnriched, Findings
+from models import Finding, FindingContext, FindingEnriched, Findings, Check
 
 from scm import BaseScmAdapter, Scm
 from scm.adapters.filesystem import FilesystemAdapter
@@ -94,7 +94,7 @@ async def check_single_finding(
     try:
         feedback = await adapter.prompt_structured(system_prompt, prompt, Check)
         new_finding = copy(finding)
-        new_finding.feedback = feedback
+        new_finding.check = feedback
         return new_finding
     except Exception as e:
         logger.error(f"[Error] Finding '{finding}': {e}")
@@ -403,9 +403,7 @@ async def main():
 
     print(f"{len(all_findings)} before LLM checks")
 
-    all_findings = [
-        f for f in all_findings if not "inaccurate" in f.feedback.strip().split("\n")[0]
-    ]
+    all_findings = [f for f in all_findings if findings.check.is_accurate]
 
     print(f"{len(all_findings)} after LLM checks")
 
