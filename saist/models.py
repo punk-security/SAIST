@@ -1,11 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import Annotated
+from typing import Annotated, Any
 from json import JSONEncoder
-
-
-class Check(BaseModel):
-    is_accurate: bool
-    feedback: str
 
 
 class Finding(BaseModel):
@@ -48,7 +43,7 @@ class FindingContext(Finding):
     context_end: int
 
 
-class CheckedFinding(Finding):
+class Check(BaseModel):
     is_accurate: Annotated[
         bool,
         Field(
@@ -56,3 +51,11 @@ class CheckedFinding(Finding):
         ),
     ]
     feedback: str
+
+
+class CheckedFinding(BaseModel):
+    finding: Finding
+    check: Check
+
+    def flat(self) -> dict[str, Any]:
+        return {**dict(self.finding), **dict(self.check)}

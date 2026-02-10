@@ -90,7 +90,7 @@ async def analyze_single_file(
 
 async def check_single_finding(
     scm: Scm, adapter: BaseLlmAdapter, finding: Finding
-) -> CheckedFinding | Finding:
+) -> CheckedFinding:
     """
     Checks a single finding against the file
     """
@@ -99,9 +99,8 @@ async def check_single_finding(
     logger.info(f"Confirming {finding.issue} for {finding.file}")
     prompt = f"\n\nReport:\n{finding.issue}\n\nFile: {finding.file}\n{file_content}"
     try:
-        feedback = await adapter.prompt_structured(system_prompt, prompt, Check)
-        args = dict(finding) | dict(feedback)
-        new_finding = CheckedFinding(**args)
+        check = await adapter.prompt_structured(system_prompt, prompt, Check)
+        new_finding = CheckedFinding(finding=finding, check=check)
         return new_finding
     except Exception as e:
         logger.error(f"[Error] Finding '{finding}': {e}")
@@ -113,7 +112,7 @@ async def check_all_findings(
     adapter: BaseLlmAdapter,
     findings: list[Finding],
     max_concurrent: int,
-) -> list[Finding]:
+) -> list[CheckedFinding]:
     logger.info(f"Confirming {len(findings)}")
     semaphore = asyncio.Semaphore(max_concurrent)
     tasks = [check_single_finding(scm, adapter, finding) for finding in findings]
@@ -393,8 +392,10 @@ async def main():
         print("No issues detected")
         exit(0)
 
+    checks = None
+
     if not args.disable_llm_check:
-        all_findings = await check_all_findings(
+        checks = await check_all_findings(
             scm=scm,
             adapter=llm,
             findings=all_findings,
@@ -403,11 +404,9 @@ async def main():
 
         print(f"{len(all_findings)} before LLM checks")
 
-        all_findings = [
-            f for f in all_findings if isinstance(f, CheckedFinding) and f.is_accurate
-        ]
+        all_findings = [c.finding for c in checks if c.check.is_accurate]
 
-        print(f"{len(all_findings)} after LLM checks")
+        print(f"{len(checks)} after LLM checks")
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)
@@ -423,7 +422,10 @@ async def main():
     )
 
     if args.csv:
-        write_csv(all_findings, args.csv_path)
+        if checks:
+            write_csv(checks, args.csv_path)
+        else:
+            write_csv(all_findings, args.csv_path)
 
     if args.web:
         enriched_findings = []
