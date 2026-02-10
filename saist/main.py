@@ -122,8 +122,9 @@ async def check_batch_findings(
     semaphore = asyncio.Semaphore(max_concurrent)
     tasks = [check_single_finding(scm, adapter, finding) for finding in findings]
     results = []
-    async with semaphore:
-        results = await asyncio.gather(*tasks)
+    for task in tasks:
+        async with semaphore:
+            results.append(await task)
     return results
 
 
