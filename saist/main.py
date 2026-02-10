@@ -115,11 +115,14 @@ async def check_all_findings(
 ) -> list[CheckedFinding]:
     logger.info(f"Confirming {len(findings)}")
     semaphore = asyncio.Semaphore(max_concurrent)
-    tasks = [check_single_finding(scm, adapter, finding) for finding in findings]
     results = []
-    for task in tasks:
+
+    async def controlled_request(finding):
         async with semaphore:
-            results.append(await task)
+            results.append(await check_single_finding(scm, adapter, finding))
+
+    tasks = [controlled_request(finding) for finding in findings]
+    _ = await asyncio.gather(*tasks)
     return results
 
 
@@ -394,6 +397,8 @@ async def main():
 
     checks = None
 
+    all_findings = [a for a in all_findings if a.line_number != -1]
+
     if not args.disable_llm_check:
         checks = await check_all_findings(
             scm=scm,
@@ -406,7 +411,7 @@ async def main():
 
         all_findings = [c.finding for c in checks if c.check.is_accurate]
 
-        print(f"{len(checks)} after LLM checks")
+        print(f"{len(all_findings)} after LLM checks")
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)
