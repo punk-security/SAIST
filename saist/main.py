@@ -89,7 +89,7 @@ async def check_single_finding(
     """
     file_content = await scm.read_file_contents(finding.file)
     system_prompt = prompts.CHECK_FINDING
-    logger.debug(f"Confirming {finding.issue} for {finding.file}")
+    logger.info(f"Confirming {finding.issue} for {finding.file}")
     prompt = f"\n\nReport:\n{finding.issue}\n\nFile: {finding.file}\n{file_content}"
     try:
         feedback = await adapter.prompt_structured(system_prompt, prompt, Check)
@@ -403,7 +403,7 @@ async def main():
 
     print(f"{len(all_findings)} before LLM checks")
 
-    all_findings = [f for f in all_findings if findings.check.is_accurate]
+    all_findings = [f for f in all_findings if f.check and f.check.is_accurate]
 
     print(f"{len(all_findings)} after LLM checks")
 
