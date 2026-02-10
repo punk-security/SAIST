@@ -42,3 +42,8 @@ class FindingContext(Finding):
     context: str
     context_start: int
     context_end: int
+
+
+class Check(BaseModel):
+    is_accurate: bool
+    feedback: str

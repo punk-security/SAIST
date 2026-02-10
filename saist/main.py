@@ -92,7 +92,7 @@ async def check_single_finding(
     logger.debug(f"Confirming {finding.issue} for {finding.file}")
     prompt = f"\n\nReport:\n{finding.issue}\n\nFile: {finding.file}\n{file_content}"
     try:
-        feedback = await adapter.prompt(system_prompt, prompt)
+        feedback = await adapter.prompt_structured(system_prompt, prompt, Check)
         new_finding = copy(finding)
         new_finding.feedback = feedback
         return new_finding
