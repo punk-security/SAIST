@@ -28,7 +28,7 @@ class prompts:
     CHECK_FINDING_PRE = """
     You are a senior application security engineer.
     You have been given a report on a security issue in a file from a junior security engineer.
-    Compare the report to the file, and state if the report is accurate or not.
+    Compare the report to the file, and state if the report is a false positive or a true positive.
     Provde some short feedback.
     """
     CHECK_FINDING_POST = """
