@@ -34,7 +34,7 @@ from scm.adapters.github import Github
 
 from shell import Shell
 
-from util.argparsing import parse_args
+from util.argparsing import parse_args, get_check_llm_args
 from util.caching import *
 from util.filtering import FilterRules
 from util.git import parse_unified_diff
@@ -251,6 +251,10 @@ async def main():
     print("🚀 Initializing LLM adapter...")
     llm = await _get_llm_adapter(args)
     print(f"✅ Using LLM: {args.llm} (Model: {llm.model_name})\n")
+    print("🚀 Initializing check LLM adapter...")
+    check_args = get_check_llm_args(args)
+    breakpoint()
+    check_llm = await _get_llm_adapter(check_args)
 
     if args.SCM == "poem":
         print("📝 Generating poem...\n")

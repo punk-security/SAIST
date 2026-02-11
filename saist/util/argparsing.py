@@ -66,21 +66,6 @@ class EnvDefault(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class OtherDefault(argparse.Action):
-    """If this arg is not present, take the default from the provided model"""
-    def __init__(self, target: argparse.Action, required=True, default=None, **kwargs):
-        self.target = target
-        super(EnvDefault, self).__init__(default=default, required=required, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        try:
-            values = getattr(namespace, self.target)
-        except AttributeError:
-            breakpoint()
-            print("ERROR MESSAGE GO HERE")
-        setattr(namespace, self.dest, values)
-
-
 SCM_subparsers = parser.add_subparsers(dest="SCM", help="SCM choice", required=True)
 
 filesystem_parser = SCM_subparsers.add_parser(
@@ -214,10 +199,9 @@ parser.add_argument(
     "--check-llm",
     type=str,
     choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
-    required=True,
-    action=OtherDefault,
-    target=llm 
-
+    required=False,
+    action=EnvDefault,
+    envvar="SAIST_CHECK_LLM",
 )
 
 parser.add_argument(
@@ -453,6 +437,7 @@ parser.add_argument(
 
 def parse_args():
     args = parser.parse_args()
+    breakpoint()
 
     if args.llm == "bedrock" and args.llm_api_key:
         parser.error(
@@ -483,3 +468,23 @@ def parse_args():
         )
 
     return args
+
+def get_check_llm_args(args: argparse.Namespace) -> argparse.Namespace:
+    """
+    Returns the args for the check LLM
+    """
+
+    llm_args = ["llm", "llm_api_key", "llm_rate_limit", "llm_model"]
+    out = args
+    for arg in llm_args:
+        try:
+            setattr(out, arg, getattr(args, f"check_{arg}"))
+        except AttributeError:
+            pass
+
+    return out
+
+
+
+
+
