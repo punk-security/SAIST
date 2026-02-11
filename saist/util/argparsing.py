@@ -427,9 +427,19 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--disable-llm-check",
+    "--disable-false-positive-check",
     help="If present, skip the second round trip to the LLM for false-positive detection.",
     action="store_true",
+)
+
+parser.add_argument(
+    "--check-context-size",
+    help="Number of lines on either side of the issue to supply to the false-positive check.",
+    default=6,
+    envvar="SAIST_CHECK_CONTEXT_SIZE",
+    action=EnvDefault,
+    required=False,
+    type=int
 )
 
 parser.add_argument(
