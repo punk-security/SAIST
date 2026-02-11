@@ -97,7 +97,7 @@ async def check_single_finding(
     finding_context,_,_ = await context_from_finding(scm, finding, context_size = context_size)
     system_prompt = prompts.CHECK_FINDING
     tools = [] if disable_tools else [scm.read_file_contents]
-    logger.info(f"Confirming {finding.issue} for {finding.file}")
+    logger.debug(f"Confirming {finding.issue} for {finding.file}")
     prompt = f"\n\nReport:\n{finding_string}\n\nFile: {finding.file}\n{finding_context}"
     try:
         check = await adapter.prompt_structured(system_prompt, prompt, Check, tools)
@@ -412,11 +412,11 @@ async def main():
             disable_tools=args.disable_tools
         )
 
-        print(f"{len(all_findings)} before LLM checks")
-
+        logger.info(f"{len(all_findings)} before LLM false positive checks")
         all_findings = [c.finding for c in checks if c.check.is_accurate]
-
-        print(f"{len(all_findings)} after LLM checks")
+        n_false_positives = sum(1 for c in checks if not c.check.is_accurate)
+        logger.info(f"{len(all_findings)} after LLM false positive checks")
+        print(f"llm confirmation found {n_false_positives}")
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)
