@@ -66,6 +66,21 @@ class EnvDefault(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class OtherDefault(argparse.Action):
+    """If this arg is not present, take the default from the provided model"""
+    def __init__(self, target: argparse.Action, required=True, default=None, **kwargs):
+        self.target = target
+        super(EnvDefault, self).__init__(default=default, required=required, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            values = getattr(namespace, self.target)
+        except AttributeError:
+            breakpoint()
+            print("ERROR MESSAGE GO HERE")
+        setattr(namespace, self.dest, values)
+
+
 SCM_subparsers = parser.add_subparsers(dest="SCM", help="SCM choice", required=True)
 
 filesystem_parser = SCM_subparsers.add_parser(
@@ -156,7 +171,8 @@ github_parser.add_argument(
     "pr", type=str, help="Pull Request ID", envvar="PR_NUMBER", action=EnvDefault
 )
 
-parser.add_argument(
+### LLM parser
+llm = parser.add_argument(
     "--llm",
     type=str,
     choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
@@ -165,7 +181,7 @@ parser.add_argument(
     envvar="SAIST_LLM",
 )
 
-parser.add_argument(
+llm_api_key = parser.add_argument(
     "--llm-api-key",
     type=str,
     help="API key for LLM (can be set with env var SAIST_LLM_API_KEY)",
@@ -174,7 +190,7 @@ parser.add_argument(
     required=False,
 )
 
-parser.add_argument(
+llm_model = parser.add_argument(
     "--llm-model",
     type=str,
     help="LLM model to use, othwerise use the default",
@@ -183,8 +199,7 @@ parser.add_argument(
     required=False,
 )
 
-
-parser.add_argument(
+llm_rate_limit = parser.add_argument(
     "--llm-rate-limit",
     help="Max requests per second",
     envvar="SAIST_LLM_RATE_LIMIT",
@@ -193,6 +208,47 @@ parser.add_argument(
     type=int,
     default=10,
 )
+
+### Check parser
+parser.add_argument(
+    "--check-llm",
+    type=str,
+    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
+    required=True,
+    action=OtherDefault,
+    target=llm 
+
+)
+
+parser.add_argument(
+    "--check-llm-api-key",
+    type=str,
+    help="API key for LLM (can be set with env var SAIST_CHECK_LLM_API_KEY)",
+    envvar="SAIST_CHECK_LLM_API_KEY",
+    action=EnvDefault,
+    required=False,
+)
+
+parser.add_argument(
+    "--check-llm-model",
+    type=str,
+    help="Overrides the LLM model to be used for false positive confirmation",
+    envvar="SAIST_CHECK_LLM_MODEL",
+    action=EnvDefault,
+    required=False,
+)
+
+
+parser.add_argument(
+    "--check-llm-rate-limit",
+    help="Max requests per second",
+    envvar="SAIST_CHECK_LLM_RATE_LIMIT",
+    action=EnvDefault,
+    required=False,
+    type=int,
+    default=10,
+)
+
 
 parser.add_argument(
     "--ollama-base-uri",
