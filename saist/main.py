@@ -402,7 +402,7 @@ async def main():
 
     all_findings = [a for a in all_findings if a.line_number != -1]
 
-    if not args.disable_llm_check:
+    if not args.disable_false_positive_check:
         checks = await check_all_findings(
             scm=scm,
             adapter=llm,

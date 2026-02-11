@@ -382,7 +382,8 @@ parser.add_argument(
     default=6,
     envvar="SAIST_CHECK_CONTEXT_SIZE",
     action=EnvDefault,
-    required=False
+    required=False,
+    type=int
 )
 
 parser.add_argument(
