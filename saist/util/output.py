@@ -33,7 +33,6 @@ def write_findings(comment, review_comments, request_changes):
 
 
 def write_csv(findings: Iterable[Finding] | Iterable[CheckedFinding], csv_path: str):
-    breakpoint()
     if isinstance(findings[0], Finding):
         return _write_findings_csv(findings, csv_path)
     elif isinstance(findings[0], CheckedFinding):
