@@ -89,7 +89,7 @@ async def analyze_single_file(
 
 
 async def check_single_finding(
-    scm: Scm, adapter: BaseLlmAdapter, finding: Finding
+    scm: Scm, adapter: BaseLlmAdapter, finding: Finding, disable_tools: bool
 ) -> CheckedFinding:
     """
     Checks a single finding against the file
@@ -97,10 +97,11 @@ async def check_single_finding(
     finding_string = "\n".join(f"{k}: {v}" for k, v in dict(finding).items())
     file_content = await scm.read_file_contents(finding.file)
     system_prompt = prompts.CHECK_FINDING
+    tools = [] if disable_tools else [scm.read_file_contents]
     logger.info(f"Confirming {finding.issue} for {finding.file}")
     prompt = f"\n\nReport:\n{finding_string}\n\nFile: {finding.file}\n{file_content}"
     try:
-        check = await adapter.prompt_structured(system_prompt, prompt, Check)
+        check = await adapter.prompt_structured(system_prompt, prompt, Check, tools)
         new_finding = CheckedFinding(finding=finding, check=check)
         return new_finding
     except Exception as e:
@@ -113,6 +114,7 @@ async def check_all_findings(
     adapter: BaseLlmAdapter,
     findings: list[Finding],
     max_concurrent: int,
+    disable_tools: bool
 ) -> list[CheckedFinding]:
     logger.info(f"Confirming {len(findings)}")
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -120,7 +122,7 @@ async def check_all_findings(
 
     async def controlled_request(finding):
         async with semaphore:
-            results.append(await check_single_finding(scm, adapter, finding))
+            results.append(await check_single_finding(scm, adapter, finding, disable_tools))
 
     tasks = [controlled_request(finding) for finding in findings]
     _ = await asyncio.gather(*tasks)
@@ -406,6 +408,7 @@ async def main():
             adapter=llm,
             findings=all_findings,
             max_concurrent=args.llm_rate_limit,
+            disable_tools=args.disable_tools
         )
 
         print(f"{len(all_findings)} before LLM checks")
