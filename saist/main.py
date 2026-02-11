@@ -94,10 +94,11 @@ async def check_single_finding(
     """
     Checks a single finding against the file
     """
+    finding_string = "\n".join(f"{k}: {v}" for k, v in dict(finding).items())
     file_content = await scm.read_file_contents(finding.file)
     system_prompt = prompts.CHECK_FINDING
     logger.info(f"Confirming {finding.issue} for {finding.file}")
-    prompt = f"\n\nReport:\n{finding.issue}\n\nFile: {finding.file}\n{file_content}"
+    prompt = f"\n\nReport:\n{finding_string}\n\nFile: {finding.file}\n{file_content}"
     try:
         check = await adapter.prompt_structured(system_prompt, prompt, Check)
         new_finding = CheckedFinding(finding=finding, check=check)
