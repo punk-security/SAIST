@@ -372,7 +372,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--disable-llm-check",
-    help="If present, skip the LLM-based confirmation",
+    help="If present, skip the second round trip to the LLM for false-positive detection.",
     action="store_true",
 )
 
