@@ -28,13 +28,8 @@ class prompts:
     CHECK_FINDING_PRE = """
     You are a senior application security engineer.
     You have been given a report on a security issue in a file from a junior security engineer.
-    Comparet the report to the file, and state if the report is accurate or not.
+    Compare the report to the file, and state if the report is accurate or not.
     Provde some short feedback.
-    Return your response as a json of the following form:
-    {
-      is_accurate: true or false,
-      feedback: the feedback
-    }
     """
     CHECK_FINDING_POST = """
     Below is the report and the file.
