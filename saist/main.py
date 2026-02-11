@@ -62,9 +62,6 @@ load_dotenv(".env")
 
 logger = logging.getLogger("saist")
 
-N_FINDINGS_TO_CHECK = 3
-
-
 async def analyze_single_file(
     scm: Scm, adapter: BaseLlmAdapter, filename, patch_text, disable_tools: bool
 ) -> Optional[list[Finding]]:
