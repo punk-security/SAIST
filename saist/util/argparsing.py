@@ -377,6 +377,15 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--check-context-size",
+    help="Number of lines on either side of the issue to supply to the false-positive check.",
+    default=6,
+    envvar="SAIST_CHECK_CONTEXT_SIZE",
+    action=EnvDefault,
+    required=False
+)
+
+parser.add_argument(
     "-v",
     "--verbose",
     action="count",

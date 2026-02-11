@@ -87,19 +87,18 @@ async def analyze_single_file(
         logger.error(f"[Error] File '{filename}': {e}")
         return None
 
-
 async def check_single_finding(
-    scm: Scm, adapter: BaseLlmAdapter, finding: Finding, disable_tools: bool
+    scm: Scm, adapter: BaseLlmAdapter, finding: Finding, context_size:int, disable_tools: bool
 ) -> CheckedFinding:
     """
     Checks a single finding against the file
     """
     finding_string = "\n".join(f"{k}: {v}" for k, v in dict(finding).items())
-    file_content = await scm.read_file_contents(finding.file)
+    finding_context,_,_ = await context_from_finding(scm, finding, context_size = context_size)
     system_prompt = prompts.CHECK_FINDING
     tools = [] if disable_tools else [scm.read_file_contents]
     logger.info(f"Confirming {finding.issue} for {finding.file}")
-    prompt = f"\n\nReport:\n{finding_string}\n\nFile: {finding.file}\n{file_content}"
+    prompt = f"\n\nReport:\n{finding_string}\n\nFile: {finding.file}\n{finding_context}"
     try:
         check = await adapter.prompt_structured(system_prompt, prompt, Check, tools)
         new_finding = CheckedFinding(finding=finding, check=check)
@@ -114,6 +113,7 @@ async def check_all_findings(
     adapter: BaseLlmAdapter,
     findings: list[Finding],
     max_concurrent: int,
+    context_size: int,
     disable_tools: bool
 ) -> list[CheckedFinding]:
     logger.info(f"Confirming {len(findings)}")
@@ -122,7 +122,7 @@ async def check_all_findings(
 
     async def controlled_request(finding):
         async with semaphore:
-            results.append(await check_single_finding(scm, adapter, finding, disable_tools))
+            results.append(await check_single_finding(scm, adapter, finding, context_size, disable_tools))
 
     tasks = [controlled_request(finding) for finding in findings]
     _ = await asyncio.gather(*tasks)
@@ -408,6 +408,7 @@ async def main():
             adapter=llm,
             findings=all_findings,
             max_concurrent=args.llm_rate_limit,
+            context_size=args.check_context_size,
             disable_tools=args.disable_tools
         )
 
