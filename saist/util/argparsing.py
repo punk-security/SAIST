@@ -3,6 +3,7 @@ from os import linesep, environ, cpu_count
 import sys
 from shutil import which
 from dotenv import load_dotenv
+from dataclasses import dataclass
 
 load_dotenv(".env")
 
@@ -437,7 +438,6 @@ parser.add_argument(
 
 def parse_args():
     args = parser.parse_args()
-    breakpoint()
 
     if args.llm == "bedrock" and args.llm_api_key:
         parser.error(
@@ -469,22 +469,26 @@ def parse_args():
 
     return args
 
+@dataclass
+class LLMArgs:
+    llm_model: str
+    llm.model_name: 
+    
+
+
 def get_check_llm_args(args: argparse.Namespace) -> argparse.Namespace:
     """
-    Returns the args for the check LLM
+    Returns a namespace that replaces the check args with the 
     """
 
     llm_args = ["llm", "llm_api_key", "llm_rate_limit", "llm_model"]
-    out = args
+    out = LLMArgs()
     for arg in llm_args:
         try:
-            setattr(out, arg, getattr(args, f"check_{arg}"))
+            new_arg = getattr(args, f"check_{arg}")
+            if new_arg:
+
         except AttributeError:
             pass
 
     return out
-
-
-
-
-
