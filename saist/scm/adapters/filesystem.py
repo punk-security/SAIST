@@ -23,7 +23,7 @@ class FilesystemAdapter(BaseScmAdapter):
             if not pathlib.Path(filename).is_relative_to(self.compare_path):
                 raise Exception(f"Tried to access file outside of the root: {filename}")
 
-            async with aiofiles.open(filename, mode='r', encoding='utf-8') as f:
+            async with aiofiles.open(filename, mode='r') as f:
                 contents = await f.read()
 
             return contents

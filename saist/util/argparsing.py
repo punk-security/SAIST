@@ -119,7 +119,7 @@ github_parser.add_argument(
 parser.add_argument(
     "--llm",
     type=str,
-    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
+    choices=["anthropic", "azure", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
     required=True,
     action=EnvDefault,
     envvar="SAIST_LLM"
@@ -148,6 +148,11 @@ parser.add_argument(
 parser.add_argument(
     "--openai-base-uri", type=str, help = "Base uri of openai to use any compatable service",
     envvar="SAIST_OPENAI_BASE_URI", action=EnvDefault, required=False
+    )
+
+parser.add_argument(
+    "--azure-endpoint", type=str, help = "Azure Endpoint",
+    envvar="SAIST_AZURE_OPENAI_ENDPOINT", action=EnvDefault, required=False
     )
 
 parser.add_argument(
@@ -258,6 +263,9 @@ parser.add_argument(
 
 def parse_args():
     args = parser.parse_args()
+
+    if args.llm == "azureopenai" and not args.azureopenai_endpoint:
+        parser.error(f"You must provide an Azure OpenAI endpoint")
 
     if args.llm == "bedrock" and args.llm_api_key:
         parser.error(f"Do not provide an API key for bedrock, use AWS ENV variables https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html")

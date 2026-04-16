@@ -15,6 +15,7 @@ from llm.adapters.faike import FaikeAdapter
 from llm.adapters.gemini import GeminiAdapter
 from llm.adapters.ollama import OllamaAdapter
 from llm.adapters.openai import OpenAiAdapter
+from llm.adapters.azure import AzureAdapter
 
 from models import Finding, FindingContext, FindingEnriched, Findings
 
@@ -126,6 +127,9 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
     if args.llm == 'anthropic':
         llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: anthropic Model: {llm.model_name}")
+    elif args.llm == 'azure':
+        llm = AzureAdapter( api_key = args.llm_api_key, endpoint=args.azure_endpoint, model=model)
+        logger.debug(f"Using LLM: Azure Model: {llm.model_name}")
     elif args.llm == 'bedrock':
         llm = BedrockAdapter( api_key = args.llm_api_key, model=model)
         logger.debug(f"Using LLM: AWS bedrock Model: {llm.model_name}")
