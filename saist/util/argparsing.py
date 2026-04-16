@@ -264,8 +264,8 @@ parser.add_argument(
 def parse_args():
     args = parser.parse_args()
 
-    if args.llm == "azureopenai" and not args.azureopenai_endpoint:
-        parser.error(f"You must provide an Azure OpenAI endpoint")
+    if args.llm == "azure" and not args.azure_endpoint:
+        parser.error(f"You must provide an Azure endpoint")
 
     if args.llm == "bedrock" and args.llm_api_key:
         parser.error(f"Do not provide an API key for bedrock, use AWS ENV variables https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html")
