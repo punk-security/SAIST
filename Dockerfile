@@ -2,7 +2,7 @@ FROM python:3.13-alpine AS builder
 
 # Create app directory
 RUN python -m venv /opt/venv
-RUN apk add build-base protoc
+RUN apk add build-base protoc protobuf protobuf-dev
 ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
