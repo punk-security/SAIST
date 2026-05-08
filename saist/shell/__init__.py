@@ -35,7 +35,17 @@ class Shell():
         self.findings = findings
         self.original_findings = findings
         self.should_stop = False
-        self.agent = llm.generate_agent(self.PROMPT, [self.stop, self.get_findings, self.update_findings, self.reset_findings, self.reset_chat, scm.read_file_contents])
+        self.agent = llm.generate_agent(
+            self.PROMPT,
+            [
+                self.stop,
+                self.get_findings,
+                self.update_findings,
+                self.reset_findings,
+                self.reset_chat,
+                *scm.tool_functions(),
+            ],
+        )
         self.new_messages = None
         self.console = Console()
     

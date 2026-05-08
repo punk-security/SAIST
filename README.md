@@ -30,6 +30,8 @@ We support OLLAMA for local / offline code scanning.
 - **Multi-LLM support**: `OpenAI`, `Anthropic`, `Bedrock`, `DeepSeek`, `Gemini`, `Ollama`
 - **Filesystem, Git, GitHub PR scanning modes**
 - **Pattern-based file inclusion/exclusion** using `.saist.include` and `.saist.ignore`
+- **Project-specific analysis skills** loaded from Markdown files to teach SAIST app routing, authorization, framework conventions, and other local security context
+- **LLM-generated analysis skills** for bootstrapping those files in a separate run
 - **Interactive chat** with your findings
 - **Web server** UI to view results
 - **CSV export** of findings
@@ -82,6 +84,7 @@ export SAIST_LLM_API_KEY=your-api-key
 | Launch web server to view findings | `saist/main.py --llm deepseek --web filesystem /path/to/code` |
 | Interactive shell after scanning | `saist/main.py --llm ollama --interactive filesystem /path/to/code` |
 | Export findings as CSV | `saist/main.py --llm openai --csv filesystem /path/to/code` |
+| Generate analysis skills | `saist/main.py --llm openai --generate-skills filesystem /path/to/code` |
 | Scan with docker and export findings as PDF report | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm openai --pdf filesystem /vulnerableapp` |
 | Scan with docker and export findings as PDF report with a project title | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm openai --pdf --project-name "Project Name" filesystem /vulnerableapp` |
 | Scan with docker and retain cache for future runs | `docker run -v <folder_path>:/vulnerableapp -v $PWD/SAISTCache:/app/SAISTCache punksecurity/saist --llm openai filesystem /vulnerableapp` |
@@ -134,6 +137,37 @@ This setup will:
 - Ignore anything under `tests/` and `docs/`
 ---
 
+## 🧠 Analysis Skills
+
+SAIST can load project-specific analysis skill files from `.saist/skills/*.md`. These files are added to the security review prompt so future scans understand application-specific details such as routing, authentication, authorization, framework conventions, data access, validation boundaries, dependencies, configuration, and security-sensitive workflows.
+
+Generate an initial set of skill files as a separate run:
+
+```bash
+saist/main.py --llm openai --generate-skills filesystem /path/to/code
+```
+
+Then review or edit the generated Markdown files and run SAIST normally. Skill files are loaded automatically on future scans:
+
+```bash
+saist/main.py --llm openai filesystem /path/to/code
+```
+
+Useful options:
+
+| Option | Description |
+|:------|:------------|
+| `--skills-path` | Folder containing skill Markdown files. Defaults to `.saist/skills` under the scanned project. |
+| `--generate-skills` | Ask the configured LLM to generate skill files and then exit. |
+| `--overwrite-skills` | Replace existing skill files during generation. Without this, existing files are preserved. |
+| `--disable-skills` | Do not load skill files during analysis. |
+| `--skills-max-bytes` | Limit total skill guidance added to analysis prompts. |
+| `--skills-sample-files` / `--skills-sample-bytes` | Control how much project context is sampled when generating skills. |
+
+When skills are loaded, SAIST salts its findings cache with the skill content so updated guidance gets a fresh analysis run.
+
+---
+
 
 ## 📄 PDF report generation
 
@@ -175,6 +209,10 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 | `--interactive` | Chat with the LLM after scan |
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
+| `--skills-path` | Folder containing SAIST analysis skill Markdown files |
+| `--generate-skills` | Generate SAIST analysis skill files and exit |
+| `--overwrite-skills` | Replace existing skill files during skill generation |
+| `--disable-skills` | Do not load skill files during analysis |
 | `--disable-caching` | Disable finding caching during file analysis |
 | `--skip-line-length-check` | Skip checking files for a maximum line length |
 | `--max-line-length` | Maximum allowed line length, files with lines longer than this value will be skipped |

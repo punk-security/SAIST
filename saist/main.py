@@ -32,6 +32,14 @@ from util.git import parse_unified_diff
 from util.output import print_banner, write_csv
 from util.poem import poem
 from util.prompts import prompts
+from util.skills import (
+    format_analysis_skills,
+    generate_skill_files,
+    load_analysis_skills,
+    project_root_from_args,
+    resolve_skills_dir,
+    skills_prompt_digest,
+)
 
 from web import FindingsServer
 
@@ -44,17 +52,20 @@ load_dotenv(".env")
 
 logger = logging.getLogger("saist")
 
-async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch_text, disable_tools: bool) -> Optional[list[Finding]]:
+async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch_text, disable_tools: bool, analysis_skills: str = "") -> Optional[list[Finding]]:
     """
     Analyzes a SINGLE file diff with OpenAI, returning a Findings object or None on error.
     """
     system_prompt = prompts.DETECT
+    if analysis_skills:
+        system_prompt = f"{system_prompt}\n\n{analysis_skills}"
+
     logger.debug(f"Processing {filename}")
     prompt = (
         f"\n\nFile: {filename}\n{patch_text}\n"
     )
     try:
-        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [] if disable_tools else [scm.read_file_contents])).findings
+        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [] if disable_tools else scm.tool_functions())).findings
     except Exception as e:
         logger.error(f"[Error] File '{filename}': {e}")
         return None
@@ -179,10 +190,40 @@ async def main():
         print("✨ Poem generation completed.\n")
         exit(0)
 
+    project_root = project_root_from_args(args)
+    skills_dir = resolve_skills_dir(project_root, args.skills_path)
+
+    if args.generate_skills:
+        print("🧭 Generating SAIST analysis skills...")
+        result = await generate_skill_files(
+            llm=llm,
+            project_root=project_root,
+            skills_dir=skills_dir,
+            max_files=args.skills_sample_files,
+            max_file_bytes=args.skills_sample_bytes,
+            overwrite=args.overwrite_skills,
+        )
+        print(f"✅ Sampled {result.sampled_files} files from {project_root}")
+        print(f"✅ Wrote {len(result.written)} skill files to {result.skills_dir}")
+        if result.skipped:
+            print(f"ℹ️ Skipped {len(result.skipped)} existing skill files. Use --overwrite-skills to replace them.")
+        return
+
     print("🔎 Initializing SCM adapter...")
     scm_adapter = _get_scm_adapter(args)
     scm = Scm(adapter=scm_adapter)
     print(f"✅ Using SCM: {args.SCM}\n")
+
+    analysis_skills = ""
+    if not args.disable_skills:
+        loaded_skills = load_analysis_skills(skills_dir, args.skills_max_bytes)
+        if loaded_skills:
+            analysis_skills = format_analysis_skills(loaded_skills)
+            print(f"🧠 Loaded {len(loaded_skills)} SAIST skill files from {skills_dir}\n")
+        else:
+            logging.debug(f"No SAIST skill files found under {skills_dir}")
+    else:
+        logging.debug("SAIST skill loading disabled")
 
     # 1) Get changed files
     print("📂 Fetching changed files...")
@@ -236,7 +277,7 @@ async def main():
     print("🔍 Analyzing files for security issues...")
     max_workers = min(args.llm_rate_limit, len(app_files))
     logging.debug(f"{max_workers=}")
-    all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools, args.disable_caching, args.cache_folder)
+    all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools, args.disable_caching, args.cache_folder, analysis_skills)
 
     if not all_findings:
         print("✅ No findings reported. Exiting.\n")
@@ -367,15 +408,19 @@ async def main():
     if args.ci and len(all_findings) > 0:
         exit(1)
 
-async def process_file(scm: Scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder):
+async def process_file(scm: Scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder, analysis_skills):
     start = asyncio.get_event_loop().time()
     if disable_caching is True: 
-        result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
+        result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools, analysis_skills)
     else:
         hash: str = await hash_file(scm, filename)
-        cache_file = os.path.join(cache_folder, hash + ".json")
+        cache_filename = hash + ".json"
+        if analysis_skills:
+            cache_filename = hash + "-" + skills_prompt_digest(analysis_skills) + ".json"
+
+        cache_file = os.path.join(cache_folder, cache_filename)
         if not os.path.exists(cache_file):
-            result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
+            result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools, analysis_skills)
             store_findings_to_cache_file(filename, result, cache_file)
         else:
             result = findings_from_cache_file(cache_file)
@@ -385,7 +430,7 @@ async def process_file(scm: Scm, llm, filename, patch_text, disable_tools, disab
 
     return result
 
-async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, disable_caching, cache_folder):
+async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, disable_caching, cache_folder, analysis_skills):
     if disable_caching is False:
         if not os.path.exists(cache_folder) or not os.path.isdir(cache_folder):
             os.makedirs(cache_folder, exist_ok=True)
@@ -427,7 +472,7 @@ async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, 
         tasks = []
         overall_task = overall_progress.add_task(f"Analyzing {len(app_files)} files...", total=len(app_files), start=True) # Add a task
         for filename, patch_text in app_files:
-            wrapper_func = task_progress_wrapper(process_file, overall_progress, overall_task, file_progress, filename, semaphore)(scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder)
+            wrapper_func = task_progress_wrapper(process_file, overall_progress, overall_task, file_progress, filename, semaphore)(scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder, analysis_skills)
             tasks.append(
                 wrapper_func
             )

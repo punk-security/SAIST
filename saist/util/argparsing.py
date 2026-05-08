@@ -3,6 +3,7 @@ from os import linesep, environ, cpu_count
 import sys
 from shutil import which
 from dotenv import load_dotenv
+from util.skills import DEFAULT_SKILL_MAX_BYTES, DEFAULT_SKILL_SAMPLE_BYTES, DEFAULT_SKILL_SAMPLE_FILES, DEFAULT_SKILLS_PATH
 
 load_dotenv(".env")
 
@@ -47,6 +48,8 @@ Examples:{linesep}
 {runtime} --llm ollama --interactive filesystem <path>{linesep}
 > Scan local code folder with anthropic and get web server findings
 {runtime} --llm anthropic --interactive filesystem <path>{linesep}
+> Generate project-specific analysis skills for future scans
+{runtime} --llm openai --generate-skills filesystem <path>{linesep}
 {linesep}
 """,
 )
@@ -95,10 +98,10 @@ git_parser.add_argument("--ref-to-compare", type=str, help = "Git ref to compare
     )
 git_parser.add_argument(
     "--commit-for-compare", type=str, help = "Git commit to compare from (preferred over REF if set)",
-    envvar="SAIST_GIT_BASE_COMMIT", action=EnvDefault
+    envvar="SAIST_GIT_BASE_COMMIT", action=EnvDefault, required=False
     )
 git_parser.add_argument("--commit-to-compare", type=str, help = "Git commit to compare to (preferred over REF if set)",
-    envvar="SAIST_GIT_COMPARE_COMMIT", action=EnvDefault
+    envvar="SAIST_GIT_COMPARE_COMMIT", action=EnvDefault, required=False
     )
 
 ### GITHUB
@@ -221,6 +224,41 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--skills-path", type=str, help = "Folder containing SAIST analysis skill Markdown files",
+    envvar="SAIST_SKILLS_PATH", action=EnvDefault, required=False, default=DEFAULT_SKILLS_PATH
+    )
+
+parser.add_argument(
+    "--disable-skills", help = "Do not load SAIST analysis skill files during scanning",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--generate-skills", help = "Generate SAIST analysis skill files for this project and exit",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--overwrite-skills", help = "Replace existing skill files when used with --generate-skills",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--skills-max-bytes", type=int, help = "Maximum total bytes of skill guidance to load into analysis prompts",
+    envvar="SAIST_SKILLS_MAX_BYTES", action=EnvDefault, required=False, default=DEFAULT_SKILL_MAX_BYTES
+    )
+
+parser.add_argument(
+    "--skills-sample-files", type=int, help = "Maximum number of project files to sample when generating skills",
+    envvar="SAIST_SKILLS_SAMPLE_FILES", action=EnvDefault, required=False, default=DEFAULT_SKILL_SAMPLE_FILES
+    )
+
+parser.add_argument(
+    "--skills-sample-bytes", type=int, help = "Maximum bytes to read from each sampled file when generating skills",
+    envvar="SAIST_SKILLS_SAMPLE_BYTES", action=EnvDefault, required=False, default=DEFAULT_SKILL_SAMPLE_BYTES
+    )
+
+parser.add_argument(
     "--project-name", type=str, help = "Project name for pdf output",
     envvar="SAIST_PROJECT_NAME", action=EnvDefault, required=False, default=None
     )
@@ -273,7 +311,13 @@ def parse_args():
 
     if args.llm == "faike" and args.interactive:
         parser.error("Faike LLM: Certified non-existent AI doesn't support interactive mode")
-   
+
+    if args.generate_skills and args.SCM == "poem":
+        parser.error("Cannot generate SAIST skills while using the poem command")
+
+    if args.generate_skills and args.disable_skills:
+        parser.error("Cannot use --generate-skills together with --disable-skills")
+
     if args.pdf and which("latexmk") == None:
         parser.error("Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag")
 
