@@ -173,16 +173,13 @@ When skills are loaded, SAIST salts its findings cache with the skill content so
 
 saist allows you to generate PDF reports summarizing your findings, making it easier to share insights with your team.
 
-To create a PDF report, simply use the `--pdf` flag when running the scan. By default, the report will be saved to
+To create a PDF report, use the `--pdf` flag when running the scan. By default, the report will be saved to
 `reporting/report.pdf`. You can customize the filename by using the `--pdf-filename` option followed by your desired
 filename.
 
 To add a project name onto the title page of the PDF report, use the `--project-name` option followed by your desired title.
 
-> It is recommended to use the provided Docker image for generating PDF reports, as it includes the necessary TeX suite,
-which can be quite large. This ensures that all dependencies are met and the report is generated properly.
-
-If not, you need to install latexmk to make it work.
+PDF reports are generated with the built-in ReportLab renderer, so no external document-rendering toolchain is required.
 
 ### 🐋 Example (Docker)
 

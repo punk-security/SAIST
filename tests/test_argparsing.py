@@ -28,8 +28,6 @@ def test_parse_args_sets_defaults_for_filesystem(monkeypatch, tmp_path):
     assert args.ci is False
     assert args.csv is False
     assert args.csv_path == "results.csv"
-    assert args.tex is False
-    assert args.tex_filename == "report.tex"
     assert args.pdf is False
     assert args.pdf_filename == "report.pdf"
     assert args.disable_caching is False
@@ -51,8 +49,6 @@ def test_parse_args_sets_defaults_for_filesystem(monkeypatch, tmp_path):
 
 
 def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
-    monkeypatch.setattr(argparsing, "which", lambda binary: "/usr/bin/latexmk")
-
     args = parse_with(
         monkeypatch,
         [
@@ -79,9 +75,6 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
             "--csv",
             "--csv-path",
             str(tmp_path / "results.csv"),
-            "--tex",
-            "--tex-filename",
-            str(tmp_path / "report.tex"),
             "--pdf",
             "--pdf-filename",
             str(tmp_path / "report.pdf"),
@@ -136,8 +129,6 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
     assert args.ci is True
     assert args.csv is True
     assert args.csv_path == str(tmp_path / "results.csv")
-    assert args.tex is True
-    assert args.tex_filename == str(tmp_path / "report.tex")
     assert args.pdf is True
     assert args.pdf_filename == str(tmp_path / "report.pdf")
     assert args.disable_caching is True
@@ -295,11 +286,7 @@ def test_parse_args_rejects_bedrock_api_key(monkeypatch, capsys):
     assert "Do not provide an API key for bedrock" in capsys.readouterr().out
 
 
-def test_parse_args_rejects_pdf_when_latexmk_is_missing(monkeypatch, capsys):
-    monkeypatch.setattr(argparsing, "which", lambda binary: None)
+def test_parse_args_accepts_pdf_without_external_renderer_dependency(monkeypatch):
+    args = parse_with(monkeypatch, ["--llm", "faike", "--pdf", "filesystem", "/tmp/project"])
 
-    with pytest.raises(SystemExit) as exc_info:
-        parse_with(monkeypatch, ["--llm", "faike", "--pdf", "filesystem", "/tmp/project"])
-
-    assert exc_info.value.code == 2
-    assert "Unable to find 'latexmk'" in capsys.readouterr().out
+    assert args.pdf is True

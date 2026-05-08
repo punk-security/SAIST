@@ -1,7 +1,6 @@
 import argparse
 from os import linesep, environ, cpu_count
 import sys
-from shutil import which
 from dotenv import load_dotenv
 from util.skills import DEFAULT_SKILL_MAX_BYTES, DEFAULT_SKILL_SAMPLE_BYTES, DEFAULT_SKILL_SAMPLE_FILES, DEFAULT_SKILLS_PATH
 
@@ -194,16 +193,6 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--tex", help = "Write results of TeX file",
-    required=False, action='store_true'
-    )
-
-parser.add_argument(
-    "--tex-filename", type=str, help = "Filename of TeX file",
-    envvar="SAIST_TEX_FILENAME", action=EnvDefault, required=False, default="report.tex"
-    )
-
-parser.add_argument(
     "--pdf", help = "Write results of PDF report",
     required=False, action='store_true'
     )
@@ -317,8 +306,5 @@ def parse_args():
 
     if args.generate_skills and args.disable_skills:
         parser.error("Cannot use --generate-skills together with --disable-skills")
-
-    if args.pdf and which("latexmk") == None:
-        parser.error("Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag")
 
     return args

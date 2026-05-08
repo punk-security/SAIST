@@ -5,7 +5,7 @@ import os
 from typing import Optional
 
 from dotenv import load_dotenv
-from latex import Latex
+from reportlab_pdf import ReportLabPdf
 
 from llm.adapters import BaseLlmAdapter
 from llm.adapters.anthropic import AnthropicAdapter
@@ -386,7 +386,7 @@ async def main():
         w = FindingsServer(args.web_host, args.web_port)
         w.run(enriched_findings)
 
-    if args.pdf or args.tex:
+    if args.pdf:
         findings_context = []
         for finding in all_findings:
             try:
@@ -402,8 +402,8 @@ async def main():
                 findings_context.append(fc)
             except:
                 continue
-        l = Latex(llm, args.project_name, findings_context, comment)
-        l.run(args)
+        r = ReportLabPdf(llm, args.project_name, findings_context, comment)
+        r.run(args)
 
     if args.ci and len(all_findings) > 0:
         exit(1)
