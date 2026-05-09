@@ -201,10 +201,12 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 
 | Option | Description |
 |:------|:------------|
-| `--llm` | Select LLM (`anthropic`, `deepseek`, `gemini`, `ollama`, `openai`) |
+| `--llm` | Select LLM (`anthropic`, `azure-foundry`, `bedrock`, `deepseek`, `gemini`, `ollama`, `openai`) |
 | `--llm-api-key` | API key for your LLM |
 | `--llm-model` | (Optional) Specific model (e.g., `gpt-4o`) |
 | `--thinking` | Pydantic AI thinking effort: `minimal`, `low`, `medium`, `high`, `xhigh`, or `disabled` |
+| `--azure-openai-endpoint` | Azure AI Foundry or Azure OpenAI endpoint. Can also be set with `AZURE_OPENAI_ENDPOINT`; `/openai/v1/` endpoints use the Responses API without `api-version`. |
+| `--azure-openai-api-version` | Azure OpenAI API version for non-v1 endpoints. Can also be set with `OPENAI_API_VERSION`. |
 | `--interactive` | Chat with the LLM after scan |
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |

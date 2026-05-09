@@ -2,6 +2,7 @@ import asyncio
 
 from llm import adapters
 from llm.adapters import BaseLlmAdapter
+from llm.adapters.azure_foundry import AzureFoundryAdapter
 from llm.adapters.faike import FaikeAdapter
 from llm.adapters.openai import OpenAiAdapter
 from models import Findings
@@ -49,4 +50,19 @@ def test_openai_adapter_uses_responses_model_for_thinking_support():
 
     assert isinstance(adapter.model, OpenAIResponsesModel)
     assert adapter.model_name == "gpt-5-mini"
+    assert adapter.get_model_options()["thinking"] == "high"
+
+
+def test_azure_foundry_adapter_uses_responses_model_and_azure_provider():
+    adapter = AzureFoundryAdapter(
+        model="gpt-5-mini",
+        api_key="test-key",
+        azure_endpoint="https://example.openai.azure.com/openai/v1/",
+        thinking="high",
+    )
+
+    assert isinstance(adapter.model, OpenAIResponsesModel)
+    assert adapter.model_name == "gpt-5-mini"
+    assert adapter.model_vendor == "Azure AI Foundry"
+    assert adapter.model.provider.name == "azure"
     assert adapter.get_model_options()["thinking"] == "high"

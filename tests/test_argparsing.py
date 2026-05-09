@@ -22,6 +22,8 @@ def test_parse_args_sets_defaults_for_filesystem(monkeypatch, tmp_path):
     assert args.thinking == "medium"
     assert args.ollama_base_uri == "http://localhost:11434"
     assert args.openai_base_uri is None
+    assert args.azure_openai_endpoint is None
+    assert args.azure_openai_api_version is None
     assert args.interactive is False
     assert args.disable_tools is False
     assert args.deep is False
@@ -71,6 +73,10 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
             "http://ollama.example",
             "--openai-base-uri",
             "http://openai.example",
+            "--azure-openai-endpoint",
+            "https://example.openai.azure.com/openai/v1/",
+            "--azure-openai-api-version",
+            "preview",
             "--interactive",
             "--disable-tools",
             "--deep",
@@ -131,6 +137,8 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
     assert args.thinking == "high"
     assert args.ollama_base_uri == "http://ollama.example"
     assert args.openai_base_uri == "http://openai.example"
+    assert args.azure_openai_endpoint == "https://example.openai.azure.com/openai/v1/"
+    assert args.azure_openai_api_version == "preview"
     assert args.interactive is True
     assert args.disable_tools is True
     assert args.deep is True
@@ -196,6 +204,18 @@ def test_parse_args_accepts_disabled_thinking(monkeypatch, tmp_path):
     args = parse_with(monkeypatch, ["--llm", "faike", "--thinking", "disabled", "filesystem", str(tmp_path)])
 
     assert args.thinking == "disabled"
+
+
+def test_parse_args_accepts_azure_foundry_without_generic_api_key(monkeypatch, tmp_path):
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/openai/v1/")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "azure-key")
+
+    args = parse_with(monkeypatch, ["--llm", "azure-foundry", "--llm-model", "gpt-5-mini", "filesystem", str(tmp_path)])
+
+    assert args.llm == "azure-foundry"
+    assert args.llm_model == "gpt-5-mini"
+    assert args.llm_api_key is None
+    assert args.azure_openai_endpoint is None
 
 
 def test_parse_args_rejects_zero_iterations(monkeypatch, tmp_path):

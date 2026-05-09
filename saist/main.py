@@ -9,6 +9,7 @@ from reportlab_pdf import ReportLabPdf
 
 from llm.adapters import BaseLlmAdapter
 from llm.adapters.anthropic import AnthropicAdapter
+from llm.adapters.azure_foundry import AzureFoundryAdapter
 from llm.adapters.bedrock import BedrockAdapter
 from llm.adapters.deepseek import DeepseekAdapter
 from llm.adapters.faike import FaikeAdapter
@@ -350,6 +351,15 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
     if args.llm == 'anthropic':
         llm = AnthropicAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: anthropic Model: {llm.model_name}")
+    elif args.llm == 'azure-foundry':
+        llm = AzureFoundryAdapter(
+            api_key=args.llm_api_key,
+            model=model,
+            azure_endpoint=args.azure_openai_endpoint,
+            api_version=args.azure_openai_api_version,
+            thinking=thinking,
+        )
+        logger.debug(f"Using LLM: Azure AI Foundry Model: {llm.model_name}")
     elif args.llm == 'bedrock':
         llm = BedrockAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: AWS bedrock Model: {llm.model_name}")

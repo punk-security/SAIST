@@ -122,7 +122,7 @@ github_parser.add_argument(
 parser.add_argument(
     "--llm",
     type=str,
-    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
+    choices=["anthropic", "azure-foundry", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
     required=True,
     action=EnvDefault,
     envvar="SAIST_LLM"
@@ -172,6 +172,24 @@ parser.add_argument(
     "--openai-base-uri", type=str, help = "Base uri of openai to use any compatable service",
     envvar="SAIST_OPENAI_BASE_URI", action=EnvDefault, required=False
     )
+
+parser.add_argument(
+    "--azure-openai-endpoint",
+    type=str,
+    help="Azure AI Foundry or Azure OpenAI endpoint (can be set with AZURE_OPENAI_ENDPOINT)",
+    envvar="AZURE_OPENAI_ENDPOINT",
+    action=EnvDefault,
+    required=False,
+)
+
+parser.add_argument(
+    "--azure-openai-api-version",
+    type=str,
+    help="Azure OpenAI API version for non-v1 endpoints (can be set with OPENAI_API_VERSION)",
+    envvar="OPENAI_API_VERSION",
+    action=EnvDefault,
+    required=False,
+)
 
 parser.add_argument(
     "--interactive", help = "Spawn an interactive prompt with the LLM at the end",
@@ -318,7 +336,7 @@ def parse_args():
     if args.llm == "bedrock" and args.interactive:
         parser.error("Sorry, we dont support interactive mode with bedrock as AWS tool calling is a bit broken")
 
-    if args.llm not in [ "ollama", "bedrock", "faike" ] and args.llm_api_key is None:
+    if args.llm not in [ "azure-foundry", "ollama", "bedrock", "faike" ] and args.llm_api_key is None:
         parser.error(f"You must provide an api key with --llm-api-key if using {args.llm}")
 
     if args.llm == "ollama" and args.interactive:

@@ -356,6 +356,24 @@ def test_get_llm_adapter_applies_thinking_option_to_adapter():
     assert adapter.thinking == "xhigh"
 
 
+def test_get_llm_adapter_builds_azure_foundry_adapter():
+    args = SimpleNamespace(
+        llm="azure-foundry",
+        llm_model="gpt-5-mini",
+        llm_api_key="azure-key",
+        azure_openai_endpoint="https://example.openai.azure.com/openai/v1/",
+        azure_openai_api_version=None,
+        thinking="high",
+        ollama_base_uri="http://localhost:11434",
+    )
+
+    adapter = asyncio.run(saist_main._get_llm_adapter(args))
+
+    assert adapter.model_vendor == "Azure AI Foundry"
+    assert adapter.model_name == "gpt-5-mini"
+    assert adapter.thinking == "high"
+
+
 def test_dedupe_findings_keeps_first_for_same_priority():
     first = Finding.model_validate(
         {
