@@ -252,17 +252,56 @@ async def generate_findings_with_filesystem_tools_iterations(
 ) -> tuple[list[Finding], set[str]]:
     semaphore = asyncio.Semaphore(max(1, max_concurrent))
 
-    async def run_iteration():
-        async with semaphore:
-            return await generate_findings_with_filesystem_tools(
-                scm=scm,
-                llm=llm,
-                filenames=filenames,
-                disable_tools=disable_tools,
-                analysis_skills=analysis_skills,
-            )
+    overall_progress = Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+    )
 
-    results = await asyncio.gather(*(run_iteration() for _ in range(iterations)))
+    iteration_progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[blue]{task.description}"),
+        transient=True,
+    )
+
+    progress_group = Group(
+        overall_progress,
+        iteration_progress,
+    )
+
+    async def run_iteration(iteration: int, overall_task):
+        async with semaphore:
+            iteration_task = iteration_progress.add_task(
+                description=f"Iteration {iteration}/{iterations}...",
+                transient=True,
+            )
+            try:
+                return await generate_findings_with_filesystem_tools(
+                    scm=scm,
+                    llm=llm,
+                    filenames=filenames,
+                    disable_tools=disable_tools,
+                    analysis_skills=analysis_skills,
+                )
+            finally:
+                iteration_progress.remove_task(iteration_task)
+                iteration_progress.refresh()
+                overall_progress.update(overall_task, advance=1)
+
+    with Live(progress_group):
+        overall_task = overall_progress.add_task(
+            f"Running {iterations} tool-driven analysis iteration{'s' if iterations != 1 else ''}...",
+            total=iterations,
+            start=True,
+        )
+        try:
+            results = await asyncio.gather(*(run_iteration(iteration, overall_task) for iteration in range(1, iterations + 1)))
+        finally:
+            overall_progress.stop()
+            iteration_progress.stop()
+
     all_findings = []
     files_read = set()
     for findings, iteration_files_read in results:
