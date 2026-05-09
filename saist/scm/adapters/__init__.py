@@ -5,6 +5,15 @@ import re
 
 
 class BaseScmAdapter(metaclass=ABCMeta):
+    DETECT_PROMPT = ""
+    SUMMARY_PROMPT = ""
+
+    def detect_prompt(self) -> str:
+        return self.DETECT_PROMPT
+
+    def summary_prompt(self) -> str:
+        return self.SUMMARY_PROMPT
+
     @abstractmethod
     def create_review(self, comment, review_comments, request_changes):
         """

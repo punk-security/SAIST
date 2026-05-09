@@ -22,6 +22,7 @@ def test_parse_args_sets_defaults_for_filesystem(monkeypatch, tmp_path):
     assert args.openai_base_uri is None
     assert args.interactive is False
     assert args.disable_tools is False
+    assert args.deep is False
     assert args.web is False
     assert args.web_port == 8080
     assert args.web_host == "127.0.0.1"
@@ -66,6 +67,7 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
             "http://openai.example",
             "--interactive",
             "--disable-tools",
+            "--deep",
             "--web",
             "--web-port",
             "9999",
@@ -123,6 +125,7 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
     assert args.openai_base_uri == "http://openai.example"
     assert args.interactive is True
     assert args.disable_tools is True
+    assert args.deep is True
     assert args.web is True
     assert args.web_port == 9999
     assert args.web_host == "0.0.0.0"
@@ -267,6 +270,10 @@ def test_parse_args_accepts_poem_subcommand(monkeypatch):
         (
             ["--llm", "faike", "--generate-skills", "--disable-skills", "filesystem", "/tmp/project"],
             "Cannot use --generate-skills together with --disable-skills",
+        ),
+        (
+            ["--llm", "faike", "--disable-tools", "filesystem", "/tmp/project"],
+            "Filesystem scans without --deep require tool use",
         ),
     ],
 )

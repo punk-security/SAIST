@@ -12,6 +12,20 @@ from util.output import write_findings
 logger = logging.getLogger(__name__)
 
 class GitAdapter(BaseScmAdapter):
+    DETECT_PROMPT = """
+You are analyzing a diff of code that needs security review.
+The supplied input is a single file's unified diff from a git comparison.
+Focus on exploitable vulnerabilities introduced, exposed, or materially changed by this diff.
+Use tools to retrieve the full file and related files to validate whether the changed code is reachable, attacker-controlled, and crosses a security boundary.
+Report only vulnerabilities anchored to changed lines in the original diff. Do not report pre-existing best-practice issues unless the diff makes them exploitable or materially worse.
+For business logic changes, inspect surrounding authorization, state transition, tenancy, payment, invitation, webhook, or admin-flow code before deciding.
+"""
+
+    SUMMARY_PROMPT = """
+This summary is for a diff-based code security review.
+Summarize exploitable risks introduced or changed by the supplied diff, including business impact and affected security boundaries. Do not summarize generic best practices.
+"""
+
     async def get_file_contents(self, file_path: str):
         logger.debug(f"file_get_contents: Reading {file_path}")
         clean_path = self._clean_repo_path(file_path)

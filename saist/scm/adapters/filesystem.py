@@ -16,6 +16,21 @@ from .. import File
 logger = logging.getLogger(__name__)
 
 class FilesystemAdapter(BaseScmAdapter):
+    DETECT_PROMPT = """
+You are performing a penetration test style review across the entire application codebase.
+The supplied input is one file from the application. It may be represented as a unified diff from an empty file, but you should treat it as application code in scope for a whole-codebase security assessment.
+Use tools aggressively to map routes, controllers, models, middleware, policies, serializers, templates, jobs, and configuration before deciding what is exploitable.
+Trace attacker-controlled input from entrypoint to sink and trace authorization decisions from identity source to protected action.
+Look for business logic vulnerabilities across files: cross-tenant data access, horizontal/vertical privilege escalation, order/payment/state-machine manipulation, invitation or password-reset abuse, webhook forgery, unsafe admin actions, and background jobs that trust user-controlled state.
+Report vulnerabilities that are present in the application, even when the exploit depends on interactions across multiple files.
+Avoid one-file lint findings unless that file alone proves a reachable vulnerability.
+"""
+
+    SUMMARY_PROMPT = """
+This summary is for a penetration test style review across the entire application codebase.
+Summarize exploitable application risks, affected trust boundaries, likely business impact, and the highest-impact fixes. Do not summarize generic best practices.
+"""
+
     async def get_file_contents(self, filename: str):
         logger.debug(f"get_file_contents: reading file {filename} under {self.compare_path}")
         try:

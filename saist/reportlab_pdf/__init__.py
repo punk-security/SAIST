@@ -452,6 +452,14 @@ class ReportLabPdf:
                 textColor=PUNK_SECONDARY,
             )
         )
+        styles.add(
+            ParagraphStyle(
+                name="IssueSummarySeverity",
+                parent=styles["IssueSummaryCell"],
+                alignment=TA_CENTER,
+                fontName=FONT_BOLD,
+            )
+        )
 
         styles["Title"].alignment = TA_CENTER
         styles["Title"].fontSize = 28
@@ -594,15 +602,18 @@ class ReportLabPdf:
                 Paragraph("Issue ID", styles["IssueSummaryHeader"]),
                 Paragraph("Title", styles["IssueSummaryHeader"]),
                 Paragraph("File", styles["IssueSummaryHeader"]),
+                Paragraph("Severity", styles["IssueSummaryHeader"]),
             ]
         ]
 
         for index, finding in enumerate(self.findings, start=1):
+            priority_label, _ = self._priority(finding.priority)
             rows.append(
                 [
                     Paragraph(self._escaped(f"ISSUE {index:02d}"), styles["IssueSummaryId"]),
                     Paragraph(self._escaped(finding.title), styles["IssueSummaryCell"]),
                     Paragraph(self._escaped(finding.file), styles["IssueSummaryCell"]),
+                    Paragraph(self._escaped(priority_label), styles["IssueSummarySeverity"]),
                 ]
             )
 
@@ -612,10 +623,11 @@ class ReportLabPdf:
                     Paragraph("-", styles["IssueSummaryCell"]),
                     Paragraph("No issues were provided.", styles["IssueSummaryCell"]),
                     Paragraph("-", styles["IssueSummaryCell"]),
+                    Paragraph("-", styles["IssueSummaryCell"]),
                 ]
             )
 
-        table = Table(rows, colWidths=[1.05 * inch, 3.1 * inch, 2.55 * inch], hAlign="LEFT", repeatRows=1)
+        table = Table(rows, colWidths=[0.92 * inch, 2.45 * inch, 2.35 * inch, 0.98 * inch], hAlign="LEFT", repeatRows=1)
         table_style = [
             ("BACKGROUND", (0, 0), (-1, 0), PUNK_SECONDARY),
             ("TEXTCOLOR", (0, 0), (-1, 0), PUNK_WHITE),
@@ -627,11 +639,25 @@ class ReportLabPdf:
             ("RIGHTPADDING", (0, 0), (-1, -1), 8),
             ("TOPPADDING", (0, 0), (-1, -1), 7),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ("ALIGN", (3, 1), (3, -1), "CENTER"),
         ]
 
         for row_index, finding in enumerate(self.findings, start=1):
             if row_index % 2 == 0:
                 table_style.append(("BACKGROUND", (0, row_index), (-1, row_index), PRINT_PANEL))
+            priority_label, priority_color = self._priority(finding.priority)
+            table_style.extend(
+                [
+                    ("BACKGROUND", (3, row_index), (3, row_index), priority_color),
+                    (
+                        "TEXTCOLOR",
+                        (3, row_index),
+                        (3, row_index),
+                        PUNK_BG if priority_label in {"Low", "Medium"} else PUNK_WHITE,
+                    ),
+                    ("FONTNAME", (3, row_index), (3, row_index), FONT_BOLD),
+                ]
+            )
 
         table.setStyle(TableStyle(table_style))
         return table

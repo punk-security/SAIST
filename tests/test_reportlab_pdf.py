@@ -150,3 +150,67 @@ def test_reportlab_pdf_splits_long_summary_across_pages(tmp_path, monkeypatch):
     pdf_path = tmp_path / "reporting" / "long-summary.pdf"
     assert pdf_path.exists()
     assert pdf_path.read_bytes().startswith(b"%PDF")
+
+
+def test_reportlab_pdf_handles_long_code_lines_and_long_index_values(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    args = type(
+        "Args",
+        (),
+        {
+            "pdf_filename": "long-code-lines.pdf",
+            "SCM": "filesystem",
+            "path": "/example/project",
+        },
+    )()
+    long_line = "token = '" + ("abcdef1234567890" * 30) + "'"
+    findings = example_findings()
+    findings[0].title = "Long code line remains readable in the generated report"
+    findings[0].file = "app/security/reports/very/deeply/nested/module_with_a_long_filename.py"
+    findings[0].context = "def load_token():\n" + long_line + "\nreturn token"
+    findings[0].context_start = 1
+    findings[0].context_end = 3
+    findings[0].line_number = 2
+
+    ReportLabPdf(
+        llm=FakeLlm(),
+        project="Example Project",
+        findings=findings,
+        comment=STATIC_SUMMARY,
+    ).run(args)
+
+    pdf_path = tmp_path / "reporting" / "long-code-lines.pdf"
+    assert pdf_path.exists()
+    assert pdf_path.read_bytes().startswith(b"%PDF")
+
+
+def test_issue_summary_uses_issue_title_file_and_severity_columns():
+    report = ReportLabPdf(
+        llm=FakeLlm(),
+        project="Example Project",
+        findings=example_findings(),
+        comment=STATIC_SUMMARY,
+    )
+    styles = report._styles()
+    table = report._issue_summary_table(styles)
+
+    headers = [cell.getPlainText() for cell in table._cellvalues[0]]
+    assert headers == ["Issue ID", "Title", "File", "Severity"]
+    severity_cells = [row[3].getPlainText() for row in table._cellvalues[1:]]
+    assert severity_cells == ["Critical", "High", "Medium"]
+
+
+def test_code_markup_wraps_long_lines_and_context_highlight_stays_light():
+    report = ReportLabPdf(
+        llm=FakeLlm(),
+        project="Example Project",
+        findings=example_findings(),
+        comment=STATIC_SUMMARY,
+    )
+    long_line = "token = '" + ("abcdef1234567890" * 30) + "'"
+
+    assert "<br/>" in report._code_markup(long_line)
+
+    context_table = report._context_table(example_findings()[0], report._styles())
+    background_colours = [command[3] for command in context_table._bkgrndcmds if command[0] == "BACKGROUND"]
+    assert all(str(colour) != "Color(.113725,.227451,.164706,1)" for colour in background_colours)

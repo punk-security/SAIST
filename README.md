@@ -77,6 +77,7 @@ export SAIST_LLM_API_KEY=your-api-key
 |:-----|:--------|
 | Get a DevSecOps poem | `saist/main.py --llm openai poem` |
 | Scan a local folder | `saist/main.py --llm deepseek filesystem /path/to/code` |
+| Scan a local folder file-by-file | `saist/main.py --llm deepseek --deep filesystem /path/to/code` |
 | Scan a local folder with ollama from within docker| `docker run --network=host -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm ollama --llm-model gemma3:4b fileystem /vulnerableapp` |
 | Scan a local Git repo | `saist/main.py --llm openai git /path/to/repo` |
 | Scan a local Git repo (branch diff) | `saist/main.py --llm openai git /path/to/repo --ref-for-compare main --ref-to-compare feature-branch` |
@@ -206,6 +207,7 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 | `--interactive` | Chat with the LLM after scan |
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
+| `--deep` | For filesystem scans, analyze every file individually. Without this, filesystem scans send a file inventory and let the LLM inspect files with tools, then report file coverage. |
 | `--skills-path` | Folder containing SAIST analysis skill Markdown files |
 | `--generate-skills` | Generate SAIST analysis skill files and exit |
 | `--overwrite-skills` | Replace existing skill files during skill generation |

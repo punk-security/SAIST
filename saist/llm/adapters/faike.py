@@ -20,7 +20,12 @@ class FaikeAdapter(BaseLlmAdapter):
 
         if response_format is Findings:
             # Extract the real filename from user_prompt, allowing future steps to work
-            filename: str = re.search("(?<=File: )(.*?)(?=\\n)", user_prompt).group(0)
+            filename_match = re.search("(?<=File: )(.*?)(?=\\n)", user_prompt)
+            if filename_match:
+                filename = filename_match.group(0)
+            else:
+                list_item_match = re.search(r"^- (.+)$", user_prompt, re.MULTILINE)
+                filename = list_item_match.group(1) if list_item_match else "app.py"
             fake_finding: dict[str: any] = {
                 "file": filename,
                 "snippet": "[]",

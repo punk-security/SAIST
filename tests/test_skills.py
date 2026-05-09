@@ -35,7 +35,8 @@ def test_format_analysis_skills_wraps_guidance_with_source_names(tmp_path):
     assert "Application analysis skills" in prompt_text
     assert "routing.md" in prompt_text
     assert "Use controllers." in prompt_text
-    assert "Report only vulnerabilities that are present in the diff" in prompt_text
+    assert "Use this context to validate exploitability and business impact" in prompt_text
+    assert "not to report generic best-practice advice" in prompt_text
 
 
 def test_project_root_and_skills_dir_resolution(tmp_path):
@@ -92,7 +93,7 @@ def test_generate_skill_files_samples_project_and_sanitizes_filenames(tmp_path):
     assert result.skipped == []
     assert result.sampled_files == 2
     assert output_file.read_text(encoding="utf-8") == "# Authorization\nCheck tenant boundaries.\n"
-    assert "application-routing.md" in llm.user_prompt
+    assert "authorization-model.md" in llm.user_prompt
     assert "package.json" in llm.user_prompt
 
 

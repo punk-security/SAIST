@@ -163,6 +163,11 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--deep", help="For filesystem scans, analyze each file individually instead of using the tool-driven whole-application scan",
+    required=False, action="store_true"
+    )
+
+parser.add_argument(
     "--web", help = "Launch a web server to display findings",
     required=False, action='store_true'
     )
@@ -306,5 +311,8 @@ def parse_args():
 
     if args.generate_skills and args.disable_skills:
         parser.error("Cannot use --generate-skills together with --disable-skills")
+
+    if args.SCM == "filesystem" and args.disable_tools and not args.deep:
+        parser.error("Filesystem scans without --deep require tool use. Remove --disable-tools or add --deep.")
 
     return args

@@ -75,5 +75,11 @@ class Scm:
         """
         return [self.read_file_contents, self.list_files, self.regex_search]
 
+    def detect_prompt(self) -> str:
+        return self.adapter.detect_prompt()
+
+    def summary_prompt(self) -> str:
+        return self.adapter.summary_prompt()
+
     def create_review(self, comment, review_comments, request_changes):
         self.adapter.create_review(comment, review_comments, request_changes)

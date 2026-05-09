@@ -17,14 +17,6 @@ DEFAULT_SKILL_SAMPLE_BYTES = 12000
 
 SKILL_SPECS = [
     (
-        "application-routing.md",
-        "How requests, jobs, events, routes, controllers, handlers, and API endpoints are wired.",
-    ),
-    (
-        "authentication-and-session.md",
-        "How users, service accounts, API clients, sessions, tokens, cookies, and identity providers work.",
-    ),
-    (
         "authorization-model.md",
         "How access control decisions are made, including roles, permissions, policies, ownership checks, and tenancy boundaries.",
     ),
@@ -33,20 +25,8 @@ SKILL_SPECS = [
         "Framework conventions and security footguns that matter when reviewing this application.",
     ),
     (
-        "data-model-and-persistence.md",
-        "Important models, repositories, migrations, query patterns, and places where data integrity or isolation matters.",
-    ),
-    (
         "input-validation-and-trust-boundaries.md",
         "Where untrusted input enters the application and how validation, parsing, escaping, and serialization are handled.",
-    ),
-    (
-        "dependency-and-configuration.md",
-        "Security-sensitive dependencies, configuration patterns, environment variables, deployment assumptions, and feature flags.",
-    ),
-    (
-        "security-sensitive-flows.md",
-        "High-risk workflows such as payments, password reset, invitations, admin actions, file upload, webhooks, and background jobs.",
     ),
 ]
 
@@ -249,7 +229,7 @@ def format_analysis_skills(skills: list[AnalysisSkill]) -> str:
 
     sections = [
         "Application analysis skills:",
-        "The following project-specific skill files are guidance for this review. Use them to understand routing, identity, authorization, framework conventions, trust boundaries, and security-sensitive flows. Treat them as context, not proof of a vulnerability. Report only vulnerabilities that are present in the diff being reviewed.",
+        "The following project-specific skill files are guidance for this review. Use them to understand routing, identity, authorization, framework conventions, trust boundaries, and security-sensitive flows. Treat them as context, not proof of a vulnerability. Use this context to validate exploitability and business impact, not to report generic best-practice advice.",
     ]
 
     for skill in skills:

@@ -8,6 +8,7 @@ import os
 
 from requests import Request
 from requests.auth import AuthBase
+from requests.exceptions import HTTPError
 
 from . import BaseScmAdapter
 
@@ -24,6 +25,19 @@ class GithubAuth(AuthBase):
 
 class Github(BaseScmAdapter):
     API_BASE_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
+    DETECT_PROMPT = """
+You are analyzing a diff of code that needs security review.
+The supplied input is a single file's unified diff from a GitHub pull request.
+Focus on exploitable vulnerabilities introduced, exposed, or materially changed by this pull request.
+Use tools to retrieve the full file and related files to validate whether the changed code is reachable, attacker-controlled, and crosses a security boundary.
+Report only vulnerabilities anchored to changed lines in the original diff. Do not report pre-existing best-practice issues unless the pull request makes them exploitable or materially worse.
+For business logic changes, inspect surrounding authorization, state transition, tenancy, payment, invitation, webhook, or admin-flow code before deciding.
+"""
+
+    SUMMARY_PROMPT = """
+This summary is for a GitHub pull request diff-based code security review.
+Summarize exploitable risks introduced or changed by the pull request, including business impact and affected security boundaries. Do not summarize generic best practices.
+"""
 
     def __init__(self, github_token, repo, pr_number):
         self.github_token = github_token
@@ -61,7 +75,13 @@ class Github(BaseScmAdapter):
         clean_url = f"{self.API_BASE_URL}/repos/{self.repo}/contents/{clean_path}?ref={self.commit_sha}"
 
         res = self.requests.get(clean_url, headers={"Content-Type": "application/vnd.github.object+json"})
-        res.raise_for_status()
+        try:
+            res.raise_for_status()
+        except HTTPError:
+            if res.status_code == 404:
+                logger.warning(f"get_file_contents {clean_path}: file does not exist at PR head; skipping.")
+                return None
+            raise
 
         json_res = res.json()
 
@@ -130,7 +150,7 @@ class Github(BaseScmAdapter):
             files_page = resp.json()
             if not files_page:
                 break
-            all_files.extend(files_page)
+            all_files.extend(file for file in files_page if file.get("status") != "removed")
             page += 1
 
         return all_files
