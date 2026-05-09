@@ -49,6 +49,11 @@ PRINT_CODE_BG = colors.HexColor("#F7FAFC")
 PRINT_CODE_HIGHLIGHT = colors.HexColor("#E8F6E8")
 RAINBOW_HEX = [PUNK_BLUE_HEX, PUNK_PURPLE_HEX, PUNK_ORANGE_HEX, PUNK_GREEN_HEX, PUNK_RED_HEX]
 RAINBOW = [colors.HexColor(color) for color in RAINBOW_HEX]
+CONTENT_WIDTH = 6.7 * inch
+ISSUE_LABEL_WIDTH = 1.0 * inch
+CODE_LINE_NUMBER_WIDTH = 0.62 * inch
+FRAME_INNER_WIDTH = A4[0] - (2 * 0.65 * inch) - 12
+CONTENT_RIGHT_INDENT = max(0, FRAME_INNER_WIDTH - CONTENT_WIDTH)
 
 
 def _font_asset_path(filename: str) -> str:
@@ -194,7 +199,7 @@ class ReportLabPdf:
             ["Line", str(finding.line_number)],
         ]
 
-        table = Table(metadata, colWidths=[1.0 * inch, 6.0 * inch], hAlign="LEFT")
+        table = Table(metadata, colWidths=[ISSUE_LABEL_WIDTH, CONTENT_WIDTH - ISSUE_LABEL_WIDTH], hAlign="LEFT")
         table.setStyle(
             TableStyle(
                 [
@@ -227,12 +232,14 @@ class ReportLabPdf:
             table,
             Spacer(1, 0.18 * inch),
             Paragraph("Issue", styles["Heading3"]),
+            Spacer(1, 0.08 * inch),
             self._text_panel(finding.issue, styles),
-            Spacer(1, 0.12 * inch),
+            Spacer(1, 0.20 * inch),
             Paragraph("Recommendation", styles["Heading3"]),
+            Spacer(1, 0.08 * inch),
             self._text_panel(finding.recommendation or "Not applicable.", styles),
             Spacer(1, 0.18 * inch),
-            Paragraph("Context", styles["Heading3"]),
+            Paragraph("Affected code", styles["Heading3"]),
             self._context_table(finding, styles),
         ]
 
@@ -301,8 +308,8 @@ class ReportLabPdf:
                 name="CodeLine",
                 parent=styles["Code"],
                 fontName=FONT_MONO,
-                fontSize=7.5,
-                leading=9,
+                fontSize=6.8,
+                leading=8,
                 textColor=PRINT_TEXT,
             )
         )
@@ -343,7 +350,8 @@ class ReportLabPdf:
                 backColor=PRINT_PANEL,
                 borderColor=PRINT_BORDER,
                 borderWidth=0.4,
-                borderPadding=12,
+                borderPadding=8,
+                rightIndent=CONTENT_RIGHT_INDENT,
                 leading=14,
                 spaceAfter=8,
             )
@@ -528,7 +536,7 @@ class ReportLabPdf:
                     )
                 ],
             ],
-            colWidths=[6.7 * inch],
+            colWidths=[CONTENT_WIDTH],
             hAlign="LEFT",
         )
         table.setStyle(
@@ -654,7 +662,7 @@ class ReportLabPdf:
                 ]
             )
 
-        table = Table(rows, colWidths=[0.70 * inch, 6.00 * inch], hAlign="LEFT", repeatRows=0)
+        table = Table(rows, colWidths=[CODE_LINE_NUMBER_WIDTH, CONTENT_WIDTH - CODE_LINE_NUMBER_WIDTH], hAlign="LEFT", repeatRows=0)
         table_style = [
             ("BACKGROUND", (0, 0), (-1, -1), PRINT_CODE_BG),
             ("BACKGROUND", (0, 0), (0, -1), PRINT_PANEL_ALT),
@@ -662,13 +670,13 @@ class ReportLabPdf:
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("ALIGN", (0, 0), (0, -1), "RIGHT"),
             ("FONTNAME", (0, 0), (0, -1), FONT_MONO),
-            ("FONTSIZE", (0, 0), (0, -1), 7.5),
-            ("LEADING", (0, 0), (0, -1), 9),
+            ("FONTSIZE", (0, 0), (0, -1), 6.8),
+            ("LEADING", (0, 0), (0, -1), 8),
             ("TEXTCOLOR", (0, 0), (0, -1), PRINT_MUTED),
-            ("LEFTPADDING", (0, 0), (-1, -1), 5),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ]
 
         for index, _ in enumerate(lines):

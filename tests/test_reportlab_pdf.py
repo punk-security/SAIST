@@ -21,8 +21,26 @@ def example_findings():
                 "file": "app/views.py",
                 "snippet": "db.execute('select * from users where name = ' + username)",
                 "title": "SQL injection through string concatenation",
-                "issue": "User-controlled input is concatenated directly into a SQL query.",
-                "recommendation": "Use parameterized queries and validate the expected username format.",
+                "issue": (
+                    "User-controlled input is concatenated directly into a SQL query. "
+                    "An attacker could provide crafted input that changes the query structure, reads data for other "
+                    "users, or bypasses application-level checks. This example deliberately uses a longer issue "
+                    "paragraph so the PDF renderer exercises multi-line issue text without letting the panel overlap "
+                    "the section title. The vulnerable construction also makes later review difficult because the "
+                    "query behaviour is hidden inside string assembly rather than expressed through a database API "
+                    "that separates commands from values. If this pattern is copied into nearby handlers, the same "
+                    "weakness can spread across multiple lookup and reporting paths."
+                ),
+                "recommendation": (
+                    "Use parameterized queries for every user-controlled value and keep validation focused on the "
+                    "expected username format before the database call is made. Add a regression test that passes "
+                    "characters commonly used in SQL injection payloads and confirms they are treated as data rather "
+                    "than executable SQL. This longer recommendation verifies that remediation text wraps cleanly in "
+                    "the generated report. Review adjacent database calls for similar string concatenation and move "
+                    "shared query construction into a small helper if the same lookup pattern appears in more than "
+                    "one place. Prefer a fix that is obvious to future maintainers, because defensive query handling "
+                    "is only reliable when it remains easy to spot during code review."
+                ),
                 "cwe": "CWE-89",
                 "priority": 9,
                 "line_number": 42,
