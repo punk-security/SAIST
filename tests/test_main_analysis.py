@@ -62,6 +62,7 @@ def test_analyze_single_file_includes_analysis_skills_in_system_prompt():
     assert "not to produce a best-practice checklist" in llm.system_prompt
     assert "penetration test style review across the entire application codebase" in llm.system_prompt
     assert "cross-tenant data access" in llm.system_prompt
+    assert "include concrete validation steps" in llm.system_prompt
 
 
 def test_analyze_single_file_uses_git_diff_prompt_for_git_adapter():
@@ -155,6 +156,7 @@ def test_filesystem_tool_analysis_sends_file_inventory_and_tracks_coverage():
                         title="Secret",
                         issue="Issue",
                         recommendation="Fix it.",
+                        validation_steps=["Search for SECRET and confirm it is committed."],
                         cwe="CWE-798",
                         priority=6,
                         line_number=1,
@@ -218,6 +220,7 @@ def test_filesystem_tool_analysis_iterations_respect_concurrency_limit():
                         title=f"Secret {self.calls}",
                         issue=f"Issue {self.calls}",
                         recommendation="Fix it.",
+                        validation_steps=["Confirm the issue is reachable."],
                         cwe="CWE-798",
                         priority=6,
                         line_number=1,
@@ -682,3 +685,25 @@ def test_generate_summary_uses_scm_specific_prompt():
     llm = CapturingLlm()
     assert saist_main.generate_summary_from_findings(llm, [finding], RealGithub.SUMMARY_PROMPT) == "summary"
     assert "GitHub pull request diff-based code security review" in llm.system_prompt
+
+
+def test_review_body_includes_validation_steps():
+    finding = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "Issue",
+            "issue": "Issue",
+            "recommendation": "Fix it.",
+            "validation_steps": ["Call the endpoint.", "Confirm data crosses tenant boundaries."],
+            "cwe": "CWE-20",
+            "priority": 4,
+            "line_number": 1,
+        }
+    )
+
+    body = saist_main.build_finding_review_body(finding)
+
+    assert "**Validation Steps:**" in body
+    assert "1. Call the endpoint." in body
+    assert "2. Confirm data crosses tenant boundaries." in body

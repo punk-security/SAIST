@@ -241,6 +241,10 @@ class ReportLabPdf:
             Spacer(1, 0.08 * inch),
             self._text_panel(finding.recommendation or "Not applicable.", styles),
             Spacer(1, 0.18 * inch),
+            Paragraph("Validation steps", styles["Heading3"]),
+            Spacer(1, 0.08 * inch),
+            self._text_panel(self._validation_steps_text(finding.validation_steps), styles),
+            Spacer(1, 0.18 * inch),
             Paragraph("Affected code", styles["Heading3"]),
             self._context_table(finding, styles),
         ]
@@ -664,6 +668,12 @@ class ReportLabPdf:
 
     def _text_panel(self, text: str, styles: dict[str, ParagraphStyle]) -> Paragraph:
         return Paragraph(self._paragraph_markup(text), styles["PanelBody"])
+
+    @staticmethod
+    def _validation_steps_text(validation_steps: list[str]) -> str:
+        if not validation_steps:
+            return "Not provided."
+        return "\n".join(f"{index}. {step}" for index, step in enumerate(validation_steps, start=1))
 
     def _context_table(self, finding: FindingContext, styles: dict[str, ParagraphStyle]) -> Table:
         lines = finding.context.splitlines() if finding.context else [""]

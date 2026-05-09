@@ -239,6 +239,7 @@
         issue: item.issue,
         snippet: item.snippet,
         recommendation: item.recommendation,
+        validation_steps: (item.validation_steps || []).join('\\n'),
         cwe: item.cwe,
         priority: item.priority,
         line_number: item.line_number,
@@ -298,6 +299,12 @@
           headerName: "Recommendation", 
           field: "recommendation", 
           tooltipField: "recommendation",
+          flex: 2 
+        },
+        { 
+          headerName: "Validation Steps", 
+          field: "validation_steps", 
+          tooltipField: "validation_steps",
           flex: 2 
         },
         { 

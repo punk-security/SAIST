@@ -29,6 +29,7 @@ Do not report:
 - Issues that only exist in tool output or in generated examples.
 
 For every finding, be specific about the attacker-controlled input or actor, the vulnerable code path, the security boundary crossed, and the impact.
+For every finding, include concrete validation steps that a human reviewer can follow to reproduce or confirm the issue. These steps should identify the relevant entrypoint, required actor or permissions, input or request to try, expected vulnerable behavior, and the safe evidence that confirms impact.
 If the evidence is weak, inspect more code with tools. If it is still weak, do not report it.
 Report multiple vulnerabilities on the same line as separate findings only when they are distinct exploit paths.
 Use the available tools to retrieve full files and related files when that context is needed.

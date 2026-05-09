@@ -41,6 +41,11 @@ def example_findings():
                     "one place. Prefer a fix that is obvious to future maintainers, because defensive query handling "
                     "is only reliable when it remains easy to spot during code review."
                 ),
+                "validation_steps": [
+                    "Find the lookup_user route or caller and confirm username is controlled by the requester.",
+                    "Submit a username containing a harmless SQL metacharacter and confirm the generated query changes behavior.",
+                    "Verify the same lookup succeeds after replacing concatenation with a parameterized query.",
+                ],
                 "cwe": "CWE-89",
                 "priority": 9,
                 "line_number": 42,
@@ -61,6 +66,10 @@ def example_findings():
                 "title": "Missing tenant authorization check",
                 "issue": "The export endpoint reads customer records without checking that the requester owns the tenant.",
                 "recommendation": "Enforce a tenant ownership check before exporting customer data.",
+                "validation_steps": [
+                    "Authenticate as a user from one tenant.",
+                    "Request another tenant's customer export id and confirm records are returned.",
+                ],
                 "cwe": "CWE-862",
                 "priority": 8,
                 "line_number": 88,
@@ -81,6 +90,7 @@ def example_findings():
                 "title": "Hardcoded API token",
                 "issue": "A static API token is stored in source code and could be exposed through the repository.",
                 "recommendation": "Load secrets from a managed secret store or environment variable.",
+                "validation_steps": ["Inspect the committed settings file and confirm the token value is present."],
                 "cwe": "CWE-798",
                 "priority": 5,
                 "line_number": 12,
@@ -198,6 +208,20 @@ def test_issue_summary_uses_issue_title_file_and_severity_columns():
     assert headers == ["Issue ID", "Title", "File", "Severity"]
     severity_cells = [row[3].getPlainText() for row in table._cellvalues[1:]]
     assert severity_cells == ["Critical", "High", "Medium"]
+
+
+def test_finding_story_includes_validation_steps_section():
+    report = ReportLabPdf(
+        llm=FakeLlm(),
+        project="Example Project",
+        findings=example_findings(),
+        comment=STATIC_SUMMARY,
+    )
+    story = report._finding_story(1, example_findings()[0], report._styles())
+    story_text = "\n".join(getattr(item, "getPlainText", lambda: "")() for item in story)
+
+    assert "Validation steps" in story_text
+    assert "1. Find the lookup_user route" in story_text
 
 
 def test_code_markup_wraps_long_lines_and_context_highlight_stays_light():

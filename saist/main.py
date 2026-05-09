@@ -137,7 +137,13 @@ def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Findi
     system_prompt = prompts.summary(scm_prompt)
     prompt = ""
     for f in findings:
-        prompt += f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
+        validation_steps = "\n".join(f"    - {step}" for step in f.validation_steps) or "    - Not provided"
+        prompt += (
+            f"- **File**: `{f.file}`\n"
+            f"  - **Issue**: {f.issue}\n"
+            f"  - **Recommendation**: {f.recommendation}\n"
+            f"  - **Validation steps**:\n{validation_steps}\n\n"
+        )
 
     try:
         return adapter.prompt(system_prompt, prompt)
@@ -160,8 +166,15 @@ def build_finding_review_body(finding: Finding) -> str:
         f"**Priority:** {priority}\n\n"
         f"**CWE:** {finding.cwe}\n\n"
         f"**Recommendation:** {finding.recommendation or 'None provided.'}\n\n"
+        f"**Validation Steps:**\n{format_validation_steps(finding.validation_steps)}\n\n"
         f"**Snippet**: `{finding.snippet}`\n\n"
     )
+
+
+def format_validation_steps(validation_steps: list[str]) -> str:
+    if not validation_steps:
+        return "None provided."
+    return "\n".join(f"{index}. {step}" for index, step in enumerate(validation_steps, start=1))
 
 
 def build_filesystem_review_comments(findings: list[Finding]) -> list[dict]:

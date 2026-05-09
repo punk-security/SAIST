@@ -33,6 +33,7 @@ class FaikeAdapter(BaseLlmAdapter):
                 "title": "Fake Issue #1234",
                 "issue": "Fake Issue",
                 "recommendation": "Do Nothing",
+                "validation_steps": ["Inspect the fake finding in app.py.", "Confirm no real validation is required for Faike."],
                 "cwe": "CWE-NAN",
                 "priority": 0,
                 "line_number": 1,
