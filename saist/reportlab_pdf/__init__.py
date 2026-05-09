@@ -3,6 +3,7 @@ from html import escape
 import datetime
 import logging
 import os
+import textwrap
 
 from llm.adapters import BaseLlmAdapter
 from models import FindingContext
@@ -13,7 +14,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, XPreformatted
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.platypus.tableofcontents import TableOfContents
 
 logger = logging.getLogger("saist.reportlab_pdf")
@@ -52,6 +53,7 @@ RAINBOW = [colors.HexColor(color) for color in RAINBOW_HEX]
 CONTENT_WIDTH = 6.7 * inch
 ISSUE_LABEL_WIDTH = 1.0 * inch
 CODE_LINE_NUMBER_WIDTH = 0.62 * inch
+CODE_WRAP_CHARS = 112
 FRAME_INNER_WIDTH = A4[0] - (2 * 0.65 * inch) - 12
 CONTENT_RIGHT_INDENT = max(0, FRAME_INNER_WIDTH - CONTENT_WIDTH)
 
@@ -223,7 +225,7 @@ class ReportLabPdf:
         return [
             Paragraph(self._escaped(f"ISSUE {index:02d}"), styles["Eyebrow"]),
             self._toc_heading(
-                self._escaped(f"{finding.cwe} - {finding.file} - {finding.title}"),
+                self._escaped(f"ISSUE {index:02d} - {finding.title} - {finding.file}"),
                 styles["Heading2"],
                 1,
                 f"issue-{index}",
@@ -306,11 +308,12 @@ class ReportLabPdf:
         styles.add(
             ParagraphStyle(
                 name="CodeLine",
-                parent=styles["Code"],
+                parent=styles["BodyText"],
                 fontName=FONT_MONO,
                 fontSize=6.8,
                 leading=8,
                 textColor=PRINT_TEXT,
+                splitLongWords=1,
             )
         )
         styles.add(
@@ -447,14 +450,6 @@ class ReportLabPdf:
                 parent=styles["IssueSummaryCell"],
                 fontName=FONT_BOLD,
                 textColor=PUNK_SECONDARY,
-            )
-        )
-        styles.add(
-            ParagraphStyle(
-                name="IssueSummarySeverity",
-                parent=styles["IssueSummaryCell"],
-                alignment=TA_CENTER,
-                fontName=FONT_BOLD,
             )
         )
 
@@ -598,17 +593,16 @@ class ReportLabPdf:
             [
                 Paragraph("Issue ID", styles["IssueSummaryHeader"]),
                 Paragraph("Title", styles["IssueSummaryHeader"]),
-                Paragraph("Severity", styles["IssueSummaryHeader"]),
+                Paragraph("File", styles["IssueSummaryHeader"]),
             ]
         ]
 
         for index, finding in enumerate(self.findings, start=1):
-            severity, severity_color = self._priority(finding.priority)
             rows.append(
                 [
                     Paragraph(self._escaped(f"ISSUE {index:02d}"), styles["IssueSummaryId"]),
                     Paragraph(self._escaped(finding.title), styles["IssueSummaryCell"]),
-                    Paragraph(self._escaped(severity), styles["IssueSummarySeverity"]),
+                    Paragraph(self._escaped(finding.file), styles["IssueSummaryCell"]),
                 ]
             )
 
@@ -621,7 +615,7 @@ class ReportLabPdf:
                 ]
             )
 
-        table = Table(rows, colWidths=[1.1 * inch, 4.35 * inch, 1.25 * inch], hAlign="LEFT", repeatRows=1)
+        table = Table(rows, colWidths=[1.05 * inch, 3.1 * inch, 2.55 * inch], hAlign="LEFT", repeatRows=1)
         table_style = [
             ("BACKGROUND", (0, 0), (-1, 0), PUNK_SECONDARY),
             ("TEXTCOLOR", (0, 0), (-1, 0), PUNK_WHITE),
@@ -636,15 +630,8 @@ class ReportLabPdf:
         ]
 
         for row_index, finding in enumerate(self.findings, start=1):
-            _, severity_color = self._priority(finding.priority)
             if row_index % 2 == 0:
                 table_style.append(("BACKGROUND", (0, row_index), (-1, row_index), PRINT_PANEL))
-            table_style.extend(
-                [
-                    ("BACKGROUND", (2, row_index), (2, row_index), severity_color),
-                    ("TEXTCOLOR", (2, row_index), (2, row_index), PUNK_BG if finding.priority <= 7 else PUNK_WHITE),
-                ]
-            )
 
         table.setStyle(TableStyle(table_style))
         return table
@@ -662,7 +649,7 @@ class ReportLabPdf:
             rows.append(
                 [
                     str(line_number),
-                    XPreformatted(self._escaped(line) or " ", styles["CodeLineHighlight" if highlighted else "CodeLine"]),
+                    Paragraph(self._code_markup(line), styles["CodeLineHighlight" if highlighted else "CodeLine"]),
                 ]
             )
 
@@ -688,7 +675,6 @@ class ReportLabPdf:
             if line_number == finding.line_number:
                 table_style.extend(
                     [
-                        ("BACKGROUND", (0, index), (-1, index), colors.HexColor("#1D3A2A")),
                         ("BACKGROUND", (0, index), (-1, index), PRINT_CODE_HIGHLIGHT),
                         ("TEXTCOLOR", (0, index), (-1, index), PRINT_TEXT),
                         ("FONTNAME", (0, index), (0, index), "Courier-Bold"),
@@ -743,6 +729,18 @@ class ReportLabPdf:
     def _paragraph_markup(self, value: str) -> str:
         escaped = self._escaped(value)
         return escaped.replace("\n\n", "<br/><br/>").replace("\n", "<br/>")
+
+    def _code_markup(self, value: str) -> str:
+        line = str(value or " ")
+        wrapped = textwrap.wrap(
+            line,
+            width=CODE_WRAP_CHARS,
+            break_long_words=True,
+            break_on_hyphens=False,
+            replace_whitespace=False,
+            drop_whitespace=False,
+        ) or [" "]
+        return "<br/>".join(self._escaped(part).replace(" ", "&nbsp;") for part in wrapped)
 
     @staticmethod
     def _priority(priority: int):
