@@ -129,7 +129,7 @@ class ReportLabPdf:
                 self._table_of_contents(styles),
                 PageBreak(),
                 self._toc_heading("Summary", styles["Heading1"], 0, "summary"),
-                self._panel([[Paragraph(self._escaped(self.comment or "No summary was generated."), styles["Body"])]]),
+                self._text_panel(self.comment or "No summary was generated.", styles),
                 Spacer(1, 0.28 * inch),
                 Paragraph("Issue summary", styles["Heading2"]),
                 self._issue_summary_table(styles),
@@ -144,7 +144,7 @@ class ReportLabPdf:
         )
 
         if not self.findings:
-            story.append(self._panel([[Paragraph("No issues were provided.", styles["Body"])]]))
+            story.append(self._text_panel("No issues were provided.", styles))
             return story
 
         for index, finding in enumerate(self.findings, start=1):
@@ -227,10 +227,10 @@ class ReportLabPdf:
             table,
             Spacer(1, 0.18 * inch),
             Paragraph("Issue", styles["Heading3"]),
-            self._panel([[Paragraph(self._escaped(finding.issue), styles["Body"])]]),
+            self._text_panel(finding.issue, styles),
             Spacer(1, 0.12 * inch),
             Paragraph("Recommendation", styles["Heading3"]),
-            self._panel([[Paragraph(self._escaped(finding.recommendation or "Not applicable."), styles["Body"])]]),
+            self._text_panel(finding.recommendation or "Not applicable.", styles),
             Spacer(1, 0.18 * inch),
             Paragraph("Context", styles["Heading3"]),
             self._context_table(finding, styles),
@@ -334,6 +334,18 @@ class ReportLabPdf:
                 name="PanelLabel",
                 parent=styles["Eyebrow"],
                 textColor=PUNK_SECONDARY,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="PanelBody",
+                parent=styles["Body"],
+                backColor=PRINT_PANEL,
+                borderColor=PRINT_BORDER,
+                borderWidth=0.4,
+                borderPadding=12,
+                leading=14,
+                spaceAfter=8,
             )
         )
         styles.add(
@@ -625,21 +637,8 @@ class ReportLabPdf:
         table.setStyle(TableStyle(table_style))
         return table
 
-    def _panel(self, rows: list[list]) -> Table:
-        table = Table(rows, colWidths=[6.7 * inch], hAlign="LEFT")
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), PRINT_PANEL),
-                    ("BOX", (0, 0), (-1, -1), 0.4, PRINT_BORDER),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-                ]
-            )
-        )
-        return table
+    def _text_panel(self, text: str, styles: dict[str, ParagraphStyle]) -> Paragraph:
+        return Paragraph(self._paragraph_markup(text), styles["PanelBody"])
 
     def _context_table(self, finding: FindingContext, styles: dict[str, ParagraphStyle]) -> Table:
         lines = finding.context.splitlines() if finding.context else [""]
@@ -728,6 +727,10 @@ class ReportLabPdf:
     @staticmethod
     def _escaped(value) -> str:
         return escape(str(value or ""))
+
+    def _paragraph_markup(self, value: str) -> str:
+        escaped = self._escaped(value)
+        return escaped.replace("\n\n", "<br/><br/>").replace("\n", "<br/>")
 
     @staticmethod
     def _priority(priority: int):

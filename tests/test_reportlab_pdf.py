@@ -102,3 +102,33 @@ def test_reportlab_pdf_writes_pdf_report(tmp_path, monkeypatch):
     assert pdf_path.exists()
     assert pdf_path.read_bytes().startswith(b"%PDF")
     assert pdf_path.stat().st_size > 1000
+
+
+def test_reportlab_pdf_splits_long_summary_across_pages(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    args = type(
+        "Args",
+        (),
+        {
+            "pdf_filename": "long-summary.pdf",
+            "SCM": "filesystem",
+            "path": "/example/project",
+        },
+    )()
+    long_summary = "\n\n".join(
+        f"Executive Summary paragraph {index}. "
+        "The assessment identified several high-impact findings and includes enough detail to span "
+        "multiple pages without forcing the text into a single unbreakable table cell."
+        for index in range(70)
+    )
+
+    ReportLabPdf(
+        llm=FakeLlm(),
+        project="Example Project",
+        findings=example_findings(),
+        comment=long_summary,
+    ).run(args)
+
+    pdf_path = tmp_path / "reporting" / "long-summary.pdf"
+    assert pdf_path.exists()
+    assert pdf_path.read_bytes().startswith(b"%PDF")
