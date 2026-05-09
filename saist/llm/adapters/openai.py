@@ -2,7 +2,7 @@ from typing import Optional
 
 from llm.adapters import BaseLlmAdapter
 
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 class OpenAiAdapter(BaseLlmAdapter):
@@ -10,7 +10,7 @@ class OpenAiAdapter(BaseLlmAdapter):
         super().__init__(thinking=thinking)
         if model is None:
             model = "gpt-4o"
-        self.model = OpenAIModel(
+        self.model = OpenAIResponsesModel(
             model,
             provider = OpenAIProvider( api_key=api_key )
         )
