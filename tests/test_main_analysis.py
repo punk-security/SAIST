@@ -1,4 +1,5 @@
 import asyncio
+import time
 from types import SimpleNamespace
 
 import main as saist_main
@@ -196,10 +197,226 @@ def test_filesystem_tool_analysis_sends_file_inventory_and_tracks_coverage():
     assert llm.tool_names == ["read_file_contents", "list_files", "regex_search"]
 
 
+def test_filesystem_tool_analysis_iterations_respect_concurrency_limit():
+    class CountingLlm:
+        def __init__(self):
+            self.calls = 0
+            self.active = 0
+            self.max_active = 0
+
+        async def prompt_structured(self, system_prompt, user_prompt, response_format, tool_fns=None):
+            self.calls += 1
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            await asyncio.sleep(0.01)
+            self.active -= 1
+            return Findings(
+                findings=[
+                    Finding(
+                        file="app.py",
+                        snippet="SECRET",
+                        title=f"Secret {self.calls}",
+                        issue=f"Issue {self.calls}",
+                        recommendation="Fix it.",
+                        cwe="CWE-798",
+                        priority=6,
+                        line_number=1,
+                    )
+                ]
+            )
+
+    class FakeScm:
+        async def read_file_contents(self, filename):
+            return "SECRET = 'dev'\n"
+
+        async def list_files(self):
+            return ["app.py"]
+
+        async def regex_search(self, pattern, file_pattern="**/*", max_results=100):
+            return []
+
+        def detect_prompt(self):
+            return FilesystemAdapter.DETECT_PROMPT
+
+    llm = CountingLlm()
+    findings, files_read = asyncio.run(
+        saist_main.generate_findings_with_filesystem_tools_iterations(
+            scm=FakeScm(),
+            llm=llm,
+            filenames=["app.py"],
+            disable_tools=False,
+            analysis_skills="",
+            iterations=5,
+            max_concurrent=2,
+        )
+    )
+
+    assert llm.calls == 5
+    assert llm.max_active == 2
+    assert len(findings) == 5
+    assert files_read == set()
+
+
+def test_filesystem_tool_analysis_iterations_run_concurrently():
+    class SlowLlm:
+        async def prompt_structured(self, system_prompt, user_prompt, response_format, tool_fns=None):
+            await asyncio.sleep(0.05)
+            return Findings(findings=[])
+
+    class FakeScm:
+        async def read_file_contents(self, filename):
+            return ""
+
+        async def list_files(self):
+            return ["app.py"]
+
+        async def regex_search(self, pattern, file_pattern="**/*", max_results=100):
+            return []
+
+        def detect_prompt(self):
+            return FilesystemAdapter.DETECT_PROMPT
+
+    started = time.perf_counter()
+    asyncio.run(
+        saist_main.generate_findings_with_filesystem_tools_iterations(
+            scm=FakeScm(),
+            llm=SlowLlm(),
+            filenames=["app.py"],
+            disable_tools=False,
+            analysis_skills="",
+            iterations=3,
+            max_concurrent=3,
+        )
+    )
+    elapsed = time.perf_counter() - started
+
+    assert elapsed < 0.12
+
+
 def test_print_coverage_reports_read_percentage(capsys):
     saist_main.print_coverage({"app.py"}, ["app.py", "settings.py"])
 
     assert "LLM file coverage: 1/2 files read (50.0%)" in capsys.readouterr().out
+
+
+def test_dedupe_findings_keeps_highest_priority_for_same_file_line_and_cwe():
+    low = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "Low duplicate",
+            "issue": "Lower severity issue",
+            "recommendation": "Fix it.",
+            "cwe": "CWE-20",
+            "priority": 4,
+            "line_number": 10,
+        }
+    )
+    high = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "High duplicate",
+            "issue": "Higher severity issue",
+            "recommendation": "Fix it now.",
+            "cwe": "CWE-20",
+            "priority": 8,
+            "line_number": 10,
+        }
+    )
+    different_line = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "other_danger()",
+            "title": "Different line",
+            "issue": "Different issue",
+            "recommendation": "Fix this too.",
+            "cwe": "CWE-20",
+            "priority": 5,
+            "line_number": 11,
+        }
+    )
+
+    deduped = saist_main.dedupe_findings([low, high, different_line])
+
+    assert deduped == [high, different_line]
+
+
+def test_get_llm_adapter_applies_thinking_option_to_adapter():
+    args = SimpleNamespace(
+        llm="faike",
+        llm_model="Fake LLM",
+        llm_api_key=None,
+        thinking="xhigh",
+        ollama_base_uri="http://localhost:11434",
+    )
+
+    adapter = asyncio.run(saist_main._get_llm_adapter(args))
+
+    assert adapter.thinking == "xhigh"
+
+
+def test_dedupe_findings_keeps_first_for_same_priority():
+    first = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "First duplicate",
+            "issue": "First issue",
+            "recommendation": "First fix.",
+            "cwe": "CWE-20",
+            "priority": 7,
+            "line_number": 10,
+        }
+    )
+    second = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "Second duplicate",
+            "issue": "Second issue",
+            "recommendation": "Second fix.",
+            "cwe": "CWE-20",
+            "priority": 7,
+            "line_number": 10,
+        }
+    )
+
+    assert saist_main.dedupe_findings([first, second]) == [first]
+
+
+def test_diff_review_comments_are_built_after_dedupe():
+    first = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "First duplicate",
+            "issue": "First issue",
+            "recommendation": "First fix.",
+            "cwe": "CWE-20",
+            "priority": 5,
+            "line_number": 10,
+        }
+    )
+    second = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "Second duplicate",
+            "issue": "Second issue",
+            "recommendation": "Second fix.",
+            "cwe": "CWE-20",
+            "priority": 9,
+            "line_number": 10,
+        }
+    )
+
+    deduped = saist_main.dedupe_findings([first, second])
+    comments = saist_main.build_diff_review_comments(deduped, {"app.py": {10: 14}})
+
+    assert len(comments) == 1
+    assert comments[0]["position"] == 13
+    assert "Second issue" in comments[0]["body"]
 
 
 def test_filesystem_shallow_scan_generates_missing_skills(tmp_path, monkeypatch):
@@ -244,6 +461,7 @@ def test_filesystem_shallow_scan_generates_missing_skills(tmp_path, monkeypatch)
         path_for_comparison=None,
         llm="faike",
         llm_model=None,
+        thinking="medium",
         verbose=0,
         generate_skills=False,
         skills_path=".saist/skills",
@@ -260,6 +478,7 @@ def test_filesystem_shallow_scan_generates_missing_skills(tmp_path, monkeypatch)
         skip_line_length_check=False,
         max_line_length=1000,
         llm_rate_limit=1,
+        iterations=3,
         disable_caching=True,
         cache_folder=str(tmp_path / "cache"),
         interactive=False,

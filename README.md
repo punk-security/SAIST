@@ -204,10 +204,12 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 | `--llm` | Select LLM (`anthropic`, `deepseek`, `gemini`, `ollama`, `openai`) |
 | `--llm-api-key` | API key for your LLM |
 | `--llm-model` | (Optional) Specific model (e.g., `gpt-4o`) |
+| `--thinking` | Pydantic AI thinking effort: `minimal`, `low`, `medium`, `high`, `xhigh`, or `disabled` |
 | `--interactive` | Chat with the LLM after scan |
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
 | `--deep` | For filesystem scans, analyze every file individually. Without this, filesystem scans send a file inventory and let the LLM inspect files with tools, then report file coverage. |
+| `--iterations` | Number of tool-driven filesystem scan passes to run when `--deep` is not set. Defaults to `1`; concurrency is capped by `--llm-rate-limit`. |
 | `--skills-path` | Folder containing SAIST analysis skill Markdown files |
 | `--generate-skills` | Generate SAIST analysis skill files and exit |
 | `--overwrite-skills` | Replace existing skill files during skill generation |

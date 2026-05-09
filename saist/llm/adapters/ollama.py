@@ -10,7 +10,8 @@ import ollama
 logger = logging.getLogger(__name__)
 
 class OllamaAdapter(BaseLlmAdapter):
-    def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None):
+    def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None, thinking: str = "medium"):
+        super().__init__(thinking=thinking)
         if model is None:
             model = "llama3:latest"
         self.model = model
@@ -68,4 +69,3 @@ class OllamaAdapter(BaseLlmAdapter):
     def generate_agent(self, system_prompt: str = None, tool_fns: Optional[List[Callable]] = None):
         #TODO: OLLAMA AGENT FOR SHELL
         return None
-

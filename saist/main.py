@@ -178,6 +178,38 @@ def build_filesystem_review_comments(findings: list[Finding]) -> list[dict]:
     return comments
 
 
+def build_diff_review_comments(findings: list[Finding], file_line_maps: dict) -> list[dict]:
+    comments = []
+    for finding in findings:
+        diff_position = file_line_maps[finding.file][finding.line_number]
+        comments.append(
+            {
+                "path": finding.file,
+                "position": diff_position - 1,
+                "body": build_finding_review_body(finding),
+            }
+        )
+    return comments
+
+
+def dedupe_findings(findings: list[Finding]) -> list[Finding]:
+    deduped: dict[tuple[str, int, str], Finding] = {}
+    order: list[tuple[str, int, str]] = []
+
+    for finding in findings:
+        key = (finding.file, finding.line_number, finding.cwe)
+        existing = deduped.get(key)
+        if existing is None:
+            deduped[key] = finding
+            order.append(key)
+            continue
+
+        if finding.priority > existing.priority:
+            deduped[key] = finding
+
+    return [deduped[key] for key in order]
+
+
 async def generate_findings_with_filesystem_tools(
     scm: Scm,
     llm: BaseLlmAdapter,
@@ -207,6 +239,37 @@ Return only findings that are supported by code you inspected.
         [] if disable_tools else tracked_scm.tool_functions(),
     )
     return result.findings, tracked_scm.files_read
+
+
+async def generate_findings_with_filesystem_tools_iterations(
+    scm: Scm,
+    llm: BaseLlmAdapter,
+    filenames: list[str],
+    disable_tools: bool,
+    analysis_skills: str,
+    iterations: int,
+    max_concurrent: int,
+) -> tuple[list[Finding], set[str]]:
+    semaphore = asyncio.Semaphore(max(1, max_concurrent))
+
+    async def run_iteration():
+        async with semaphore:
+            return await generate_findings_with_filesystem_tools(
+                scm=scm,
+                llm=llm,
+                filenames=filenames,
+                disable_tools=disable_tools,
+                analysis_skills=analysis_skills,
+            )
+
+    results = await asyncio.gather(*(run_iteration() for _ in range(iterations)))
+    all_findings = []
+    files_read = set()
+    for findings, iteration_files_read in results:
+        all_findings.extend(findings)
+        files_read.update(iteration_files_read)
+
+    return all_findings, files_read
 
 
 def print_coverage(files_read: set[str], files_in_scope: list[str]):
@@ -243,28 +306,29 @@ def _get_scm_adapter(args) -> BaseScmAdapter:
 async def _get_llm_adapter(args) -> BaseLlmAdapter:
 
     model = args.llm_model
+    thinking = args.thinking
 
     if args.llm == 'anthropic':
-        llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
+        llm = AnthropicAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: anthropic Model: {llm.model_name}")
     elif args.llm == 'bedrock':
-        llm = BedrockAdapter( api_key = args.llm_api_key, model=model)
+        llm = BedrockAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: AWS bedrock Model: {llm.model_name}")
     elif args.llm == 'deepseek':
-        llm = DeepseekAdapter(api_key = args.llm_api_key, model=model)
+        llm = DeepseekAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: deepseek Model: {llm.model_name}")
     elif args.llm ==  'openai':
-        llm = OpenAiAdapter(api_key = args.llm_api_key, model=model)
+        llm = OpenAiAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: openai Model: {llm.model_name}")
     elif args.llm ==  'gemini':
-        llm = GeminiAdapter(api_key = args.llm_api_key, model=model)
+        llm = GeminiAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: gemini Model: {llm.model_name}")
     elif args.llm == 'ollama':
-        llm = OllamaAdapter(api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
+        llm = OllamaAdapter(api_key=args.llm_api_key, base_url=args.ollama_base_uri, model=model, thinking=thinking)
         await llm.initialize()
         logger.debug(f"Using LLM: ollama Model: {llm.model_name}")
     elif args.llm == 'faike':
-        llm = FaikeAdapter("", "Fake LLM")
+        llm = FaikeAdapter("", "Fake LLM", thinking=thinking)
         logger.debug("Using LLM: Faike AI")
     else:
         raise Exception("Could not determine a suitable LLM to use")
@@ -353,6 +417,7 @@ async def main():
         logging.debug("SAIST skill loading disabled")
 
     filter_rules = FilterRules(args.include, args.exclude)
+    review_comments = []
 
     if shallow_filesystem_scan:
         print("📂 Listing application files...")
@@ -369,13 +434,15 @@ async def main():
             print("⚠️  --dry-run flag passed, exiting without analyzing files.")
             exit(0)
 
-        print("🔍 Analyzing application with LLM tool use...")
-        all_findings, files_read = await generate_findings_with_filesystem_tools(
+        print(f"🔍 Analyzing application with LLM tool use ({args.iterations} iteration{'s' if args.iterations != 1 else ''})...")
+        all_findings, files_read = await generate_findings_with_filesystem_tools_iterations(
             scm=scm,
             llm=llm,
             filenames=app_filenames,
             disable_tools=args.disable_tools,
             analysis_skills=analysis_skills,
+            iterations=args.iterations,
+            max_concurrent=args.llm_rate_limit,
         )
         print_coverage(files_read, app_filenames)
 
@@ -383,9 +450,6 @@ async def main():
             print("✅ No findings reported. Exiting.\n")
             return
 
-        all_findings.sort(key=lambda x: x.priority, reverse=True)
-        review_comments = build_filesystem_review_comments(all_findings)
-        print(f"🚨 Analysis complete! Identified {len(all_findings)} potential issues.\n")
     else:
 
         # 1) Get changed files
@@ -444,10 +508,8 @@ async def main():
         if not all_findings:
             print("✅ No findings reported. Exiting.\n")
             return
-        print(f"🚨 Analysis complete! Identified {len(all_findings)} potential issues.\n")
 
         # 4) Build review comments from snippet-based findings
-        review_comments = []
         all_findings.sort(key=lambda x: x.priority,reverse=True)
         
         for item in all_findings:
@@ -463,7 +525,6 @@ async def main():
                 # Possibly flagged a file that doesn't exist in the PR
                 continue
 
-            line_map = file_line_maps[file_name]
             new_lines_text = file_new_lines_text[file_name]
 
             # Attempt to find which 'new_line' has the snippet
@@ -477,21 +538,24 @@ async def main():
                 # If we can't find the snippet in the patch, skip
                 continue
 
-            diff_position = line_map[matched_new_line]
-
-            review_comments.append({
-                "path": file_name,
-                "position": diff_position - 1,
-                "body": build_finding_review_body(item)
-            })
-
             item.line_number = matched_new_line
 
         all_findings = list([x for x in all_findings if x.line_number != -1])
 
+
+    all_findings = dedupe_findings(all_findings)
+    all_findings.sort(key=lambda x: x.priority, reverse=True)
+
     if not all_findings:
         print("No issues detected")
         exit(0)
+
+    print(f"🚨 Analysis complete! Identified {len(all_findings)} potential issues.\n")
+
+    if shallow_filesystem_scan:
+        review_comments = build_filesystem_review_comments(all_findings)
+    else:
+        review_comments = build_diff_review_comments(all_findings, file_line_maps)
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)

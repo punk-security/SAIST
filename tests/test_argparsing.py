@@ -18,6 +18,8 @@ def test_parse_args_sets_defaults_for_filesystem(monkeypatch, tmp_path):
     assert args.llm_api_key is None
     assert args.llm_model is None
     assert args.llm_rate_limit == 10
+    assert args.iterations == 1
+    assert args.thinking == "medium"
     assert args.ollama_base_uri == "http://localhost:11434"
     assert args.openai_base_uri is None
     assert args.interactive is False
@@ -61,6 +63,10 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
             "gpt-test",
             "--llm-rate-limit",
             "3",
+            "--iterations",
+            "10",
+            "--thinking",
+            "high",
             "--ollama-base-uri",
             "http://ollama.example",
             "--openai-base-uri",
@@ -121,6 +127,8 @@ def test_parse_args_accepts_all_global_scan_options(monkeypatch, tmp_path):
     assert args.llm_api_key == "test-key"
     assert args.llm_model == "gpt-test"
     assert args.llm_rate_limit == 3
+    assert args.iterations == 10
+    assert args.thinking == "high"
     assert args.ollama_base_uri == "http://ollama.example"
     assert args.openai_base_uri == "http://openai.example"
     assert args.interactive is True
@@ -182,6 +190,32 @@ def test_parse_args_accepts_skill_generation_options(monkeypatch, tmp_path):
     assert args.skills_max_bytes == 123
     assert args.skills_sample_files == 2
     assert args.skills_sample_bytes == 3
+
+
+def test_parse_args_accepts_disabled_thinking(monkeypatch, tmp_path):
+    args = parse_with(monkeypatch, ["--llm", "faike", "--thinking", "disabled", "filesystem", str(tmp_path)])
+
+    assert args.thinking == "disabled"
+
+
+def test_parse_args_rejects_zero_iterations(monkeypatch, tmp_path):
+    with pytest.raises(SystemExit):
+        parse_with(monkeypatch, ["--llm", "faike", "--iterations", "0", "filesystem", str(tmp_path)])
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--llm", "faike", "--iterations", "3", "--deep", "filesystem", "/tmp/project"],
+        ["--llm", "faike", "--iterations", "3", "git", "/tmp/project"],
+        ["--llm", "faike", "--iterations", "3", "github", "owner/repo", "--github-token", "token", "123"],
+    ],
+)
+def test_parse_args_warns_when_iterations_are_ignored(monkeypatch, capsys, argv):
+    args = parse_with(monkeypatch, argv)
+
+    assert args.iterations == 3
+    assert "--iterations only applies to filesystem scans without --deep" in capsys.readouterr().out
 
 
 def test_parse_args_accepts_git_subcommand_options(monkeypatch, tmp_path):

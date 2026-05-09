@@ -10,7 +10,8 @@ import re
 logger = logging.getLogger(__name__)
 
 class FaikeAdapter(BaseLlmAdapter):
-    def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None):
+    def __init__(self, base_url: str, model: str = None, api_key: Optional[str] = None, thinking: str = "medium"):
+        super().__init__(thinking=thinking)
         self.model = model
         self.model_name = self.model
         self.model_vendor = 'Fake AI LLM'

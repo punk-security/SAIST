@@ -2,6 +2,7 @@ import argparse
 from os import linesep, environ, cpu_count
 import sys
 from dotenv import load_dotenv
+from llm.adapters import THINKING_CHOICES
 from util.skills import DEFAULT_SKILL_MAX_BYTES, DEFAULT_SKILL_SAMPLE_BYTES, DEFAULT_SKILL_SAMPLE_FILES, DEFAULT_SKILLS_PATH
 
 load_dotenv(".env")
@@ -141,6 +142,26 @@ parser.add_argument(
     "--llm-rate-limit", help = "Max requests per second", envvar="SAIST_LLM_RATE_LIMIT", 
     action=EnvDefault, required=False, type=int, default = 10
     )
+
+parser.add_argument(
+    "--iterations",
+    help="Number of tool-driven filesystem analysis passes to run when --deep is not set",
+    envvar="SAIST_ITERATIONS",
+    action=EnvDefault,
+    required=False,
+    type=int,
+    default=1,
+)
+
+parser.add_argument(
+    "--thinking",
+    help="LLM thinking effort for providers supported by pydantic-ai",
+    choices=THINKING_CHOICES,
+    envvar="SAIST_THINKING",
+    action=EnvDefault,
+    required=False,
+    default="medium",
+)
 
 parser.add_argument(
     "--ollama-base-uri", type=str, help = "Base uri of ollama",
@@ -314,5 +335,13 @@ def parse_args():
 
     if args.SCM == "filesystem" and args.disable_tools and not args.deep:
         parser.error("Filesystem scans without --deep require tool use. Remove --disable-tools or add --deep.")
+
+    if args.iterations < 1:
+        parser.error("--iterations must be at least 1")
+
+    if args.iterations > 1 and (args.SCM != "filesystem" or args.deep):
+        sys.stdout.write(
+            f" ⚠️ warning: --iterations only applies to filesystem scans without --deep; ignoring --iterations={args.iterations}.{linesep}"
+        )
 
     return args
