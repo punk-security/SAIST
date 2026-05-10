@@ -36,12 +36,19 @@ Summarize exploitable application risks, affected trust boundaries, likely busin
         try:
             file_path = self._resolve_under_root(filename)
 
-            async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
-                contents = await f.read()
+            async with aiofiles.open(file_path, mode="rb") as f:
+                data = await f.read()
 
-            return contents
+            return data.decode("utf-8")
+        except UnicodeDecodeError:
+            logger.debug(f"get_file_contents: file is not valid UTF-8, skipping: {filename}")
+            return None
+        except (FileNotFoundError, IsADirectoryError):
+            logger.debug(f"get_file_contents: file does not exist or is not readable: {filename}")
+            return None
         except Exception as e:
-            logging.warning(f"ERR: {e}")
+            logger.warning(f"get_file_contents: could not read {filename}: {e}")
+            return None
 
     def __init__(self, compare_path: PathLike[AnyStr] | str, base_path: Optional[PathLike[AnyStr] | str] = None):
         self.base_path = base_path

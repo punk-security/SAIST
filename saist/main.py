@@ -207,11 +207,11 @@ def build_diff_review_comments(findings: list[Finding], file_line_maps: dict) ->
 
 
 def dedupe_findings(findings: list[Finding]) -> list[Finding]:
-    deduped: dict[tuple[str, int, str], Finding] = {}
-    order: list[tuple[str, int, str]] = []
+    deduped: dict[tuple[str, int], Finding] = {}
+    order: list[tuple[str, int]] = []
 
     for finding in findings:
-        key = (finding.file, finding.line_number, finding.cwe)
+        key = (finding.file, finding.line_number)
         existing = deduped.get(key)
         if existing is None:
             deduped[key] = finding
@@ -263,8 +263,12 @@ async def generate_findings_with_filesystem_tools_iterations(
     analysis_skills: str,
     iterations: int,
     max_concurrent: int,
+    disable_caching: bool = True,
+    cache_folder: str = ".cache",
 ) -> tuple[list[Finding], set[str]]:
     semaphore = asyncio.Semaphore(max(1, max_concurrent))
+    if disable_caching is False:
+        os.makedirs(cache_folder, exist_ok=True)
 
     overall_progress = Progress(
         TextColumn("[bold blue]{task.description}"),
@@ -285,6 +289,31 @@ async def generate_findings_with_filesystem_tools_iterations(
         iteration_progress,
     )
 
+    async def run_uncached_iteration(iteration: int):
+        return await generate_findings_with_filesystem_tools(
+            scm=scm,
+            llm=llm,
+            filenames=filenames,
+            disable_tools=disable_tools,
+            analysis_skills=analysis_skills,
+        )
+
+    async def run_cached_iteration(iteration: int):
+        cache_hash = await hash_files(scm, filenames, extra=analysis_skills)
+        cache_file = os.path.join(cache_folder, f"{iteration}-{cache_hash}.json")
+        if os.path.exists(cache_file):
+            return filesystem_tool_findings_from_cache_file(cache_file)
+
+        findings, files_read = await run_uncached_iteration(iteration)
+        store_filesystem_tool_findings_to_cache_file(
+            iteration=iteration,
+            filenames=filenames,
+            findings=findings,
+            files_read=files_read,
+            cache_file=cache_file,
+        )
+        return findings, files_read
+
     async def run_iteration(iteration: int, overall_task):
         async with semaphore:
             iteration_task = iteration_progress.add_task(
@@ -292,13 +321,9 @@ async def generate_findings_with_filesystem_tools_iterations(
                 transient=True,
             )
             try:
-                return await generate_findings_with_filesystem_tools(
-                    scm=scm,
-                    llm=llm,
-                    filenames=filenames,
-                    disable_tools=disable_tools,
-                    analysis_skills=analysis_skills,
-                )
+                if disable_caching:
+                    return await run_uncached_iteration(iteration)
+                return await run_cached_iteration(iteration)
             finally:
                 iteration_progress.remove_task(iteration_task)
                 iteration_progress.refresh()
@@ -505,6 +530,8 @@ async def main():
             analysis_skills=analysis_skills,
             iterations=args.iterations,
             max_concurrent=args.llm_rate_limit,
+            disable_caching=args.disable_caching,
+            cache_folder=args.cache_folder,
         )
         print_coverage(files_read, app_filenames)
 

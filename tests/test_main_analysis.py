@@ -296,13 +296,104 @@ def test_filesystem_tool_analysis_iterations_run_concurrently():
     assert elapsed < 0.12
 
 
+def test_filesystem_tool_analysis_iterations_cache_each_iteration(tmp_path):
+    class CountingLlm:
+        def __init__(self):
+            self.calls = 0
+
+        async def prompt_structured(self, system_prompt, user_prompt, response_format, tool_fns=None):
+            self.calls += 1
+            return Findings(
+                findings=[
+                    Finding(
+                        file="app.py",
+                        snippet="SECRET",
+                        title=f"Secret {self.calls}",
+                        issue=f"Issue {self.calls}",
+                        recommendation="Fix it.",
+                        validation_steps=["Confirm the issue is reachable."],
+                        cwe="CWE-798",
+                        priority=6,
+                        line_number=self.calls,
+                    )
+                ]
+            )
+
+    class FakeScm:
+        async def read_file_contents(self, filename):
+            return "SECRET = 'dev'\n"
+
+        async def list_files(self):
+            return ["app.py"]
+
+        async def regex_search(self, pattern, file_pattern="**/*", max_results=100):
+            return []
+
+        def detect_prompt(self):
+            return FilesystemAdapter.DETECT_PROMPT
+
+    llm = CountingLlm()
+    scm = FakeScm()
+    cache_dir = tmp_path / "cache"
+
+    findings, _ = asyncio.run(
+        saist_main.generate_findings_with_filesystem_tools_iterations(
+            scm=scm,
+            llm=llm,
+            filenames=["app.py"],
+            disable_tools=False,
+            analysis_skills="",
+            iterations=2,
+            max_concurrent=2,
+            disable_caching=False,
+            cache_folder=str(cache_dir),
+        )
+    )
+    assert llm.calls == 2
+    assert [finding.line_number for finding in findings] == [1, 2]
+    assert sorted(path.name.split("-", 1)[0] for path in cache_dir.iterdir()) == ["1", "2"]
+
+    cached_findings, _ = asyncio.run(
+        saist_main.generate_findings_with_filesystem_tools_iterations(
+            scm=scm,
+            llm=llm,
+            filenames=["app.py"],
+            disable_tools=False,
+            analysis_skills="",
+            iterations=2,
+            max_concurrent=2,
+            disable_caching=False,
+            cache_folder=str(cache_dir),
+        )
+    )
+    assert llm.calls == 2
+    assert [finding.line_number for finding in cached_findings] == [1, 2]
+
+    extended_findings, _ = asyncio.run(
+        saist_main.generate_findings_with_filesystem_tools_iterations(
+            scm=scm,
+            llm=llm,
+            filenames=["app.py"],
+            disable_tools=False,
+            analysis_skills="",
+            iterations=3,
+            max_concurrent=2,
+            disable_caching=False,
+            cache_folder=str(cache_dir),
+        )
+    )
+    assert llm.calls == 3
+    assert [finding.line_number for finding in extended_findings] == [1, 2, 3]
+    assert sorted(path.name.split("-", 1)[0] for path in cache_dir.iterdir()) == ["1", "2", "3"]
+
+
 def test_print_coverage_reports_read_percentage(capsys):
     saist_main.print_coverage({"app.py"}, ["app.py", "settings.py"])
 
     assert "LLM file coverage: 1/2 files read (50.0%)" in capsys.readouterr().out
 
 
-def test_dedupe_findings_keeps_highest_priority_for_same_file_line_and_cwe():
+def test_dedupe_findings_keeps_highest_priority_for_same_file_and_line():
     low = Finding.model_validate(
         {
             "file": "app.py",
@@ -404,6 +495,37 @@ def test_dedupe_findings_keeps_first_for_same_priority():
     )
 
     assert saist_main.dedupe_findings([first, second]) == [first]
+
+
+def test_dedupe_findings_ignores_cwe_for_same_file_and_line():
+    first = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "First duplicate",
+            "issue": "First issue",
+            "recommendation": "First fix.",
+            "cwe": "CWE-20",
+            "priority": 6,
+            "line_number": 10,
+        }
+    )
+    higher_priority_different_cwe = Finding.model_validate(
+        {
+            "file": "app.py",
+            "snippet": "danger()",
+            "title": "Second duplicate",
+            "issue": "Second issue",
+            "recommendation": "Second fix.",
+            "cwe": "CWE-89",
+            "priority": 8,
+            "line_number": 10,
+        }
+    )
+
+    assert saist_main.dedupe_findings([first, higher_priority_different_cwe]) == [
+        higher_priority_different_cwe
+    ]
 
 
 def test_diff_review_comments_are_built_after_dedupe():

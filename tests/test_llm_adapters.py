@@ -14,13 +14,29 @@ def test_model_options_include_pydantic_thinking_level_when_supported(monkeypatc
     adapter = BaseLlmAdapter(thinking="high")
 
     assert adapter.get_model_options()["thinking"] == "high"
+    assert "temperature" not in adapter.get_model_options()
+
+
+def test_model_options_drop_custom_sampling_parameters_when_thinking_enabled(monkeypatch):
+    monkeypatch.setattr(adapters, "pydantic_ai_supports_thinking", lambda: True)
+    adapter = BaseLlmAdapter(thinking="medium")
+    adapter.model_options = {"temperature": 0.7, "timeout": 30}
+
+    options = adapter.get_model_options()
+
+    assert options["thinking"] == "medium"
+    assert options["timeout"] == 30
+    assert "temperature" not in options
 
 
 def test_model_options_map_disabled_thinking_to_false(monkeypatch):
     monkeypatch.setattr(adapters, "pydantic_ai_supports_thinking", lambda: True)
     adapter = BaseLlmAdapter(thinking="disabled")
 
-    assert adapter.get_model_options()["thinking"] is False
+    options = adapter.get_model_options()
+
+    assert options["thinking"] is False
+    assert options["temperature"] == 0.0
 
 
 def test_model_options_omit_thinking_when_pydantic_ai_does_not_support_it(monkeypatch):

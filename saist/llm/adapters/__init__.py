@@ -10,6 +10,7 @@ logger = logging.getLogger("saist.llm.adapters")
 
 THINKING_CHOICES = ("minimal", "low", "medium", "high", "xhigh", "disabled")
 DISABLED_THINKING = "disabled"
+SAMPLING_PARAMETERS = {"temperature"}
 
 
 def pydantic_ai_supports_thinking() -> bool:
@@ -30,7 +31,12 @@ class BaseLlmAdapter:
             options.update(self.model_options)
 
         if pydantic_ai_supports_thinking():
-            options["thinking"] = False if self.thinking == DISABLED_THINKING else self.thinking
+            if self.thinking == DISABLED_THINKING:
+                options["thinking"] = False
+            else:
+                options["thinking"] = self.thinking
+                for parameter in SAMPLING_PARAMETERS:
+                    options.pop(parameter, None)
         elif self.thinking != DISABLED_THINKING:
             logger.getChild(self.__class__.__name__).debug(
                 "Installed pydantic-ai version does not support model_settings.thinking; ignoring setting."

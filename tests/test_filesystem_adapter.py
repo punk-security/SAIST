@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from scm.adapters.filesystem import FilesystemAdapter
 
@@ -23,6 +24,18 @@ def test_filesystem_adapter_reads_file_contents(tmp_path):
     assert contents == "print('hello')\n"
 
 
+def test_filesystem_adapter_returns_none_for_gzip_or_binary_file_without_err_log(tmp_path, caplog):
+    (tmp_path / "archive.gz").write_bytes(b"\x1f\x8b\x08\x00not text")
+    adapter = FilesystemAdapter(compare_path=str(tmp_path))
+
+    with caplog.at_level(logging.WARNING):
+        contents = asyncio.run(adapter.get_file_contents("archive.gz"))
+
+    assert contents is None
+    assert "ERR:" not in caplog.text
+    assert "codec can't decode" not in caplog.text
+
+
 def test_filesystem_adapter_lists_all_files(tmp_path):
     (tmp_path / "app.py").write_text("print('hello')\n", encoding="utf-8")
     (tmp_path / "image.bin").write_bytes(b"\xff\xfe\x00\x00")
@@ -38,6 +51,7 @@ def test_filesystem_adapter_regex_searches_text_files(tmp_path):
     (tmp_path / "app.py").write_text("SECRET_KEY = 'dev'\nprint(SECRET_KEY)\n", encoding="utf-8")
     (tmp_path / "README.md").write_text("SECRET_KEY is documented here\n", encoding="utf-8")
     (tmp_path / "image.bin").write_bytes(b"\xff\xfe\x00\x00")
+    (tmp_path / "archive.gz").write_bytes(b"\x1f\x8b\x08\x00SECRET_KEY")
 
     adapter = FilesystemAdapter(compare_path=str(tmp_path))
     matches = asyncio.run(adapter.regex_search(r"SECRET_KEY", file_pattern="**/*.py"))
