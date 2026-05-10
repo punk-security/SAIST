@@ -6,13 +6,19 @@ from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 class OpenAiAdapter(BaseLlmAdapter):
-    def __init__(self, model: str = None, api_key: Optional[str] = None, thinking: str = "medium"):
+    def __init__(
+        self,
+        model: str = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        thinking: str = "medium",
+    ):
         super().__init__(thinking=thinking)
         if model is None:
             model = "gpt-4o"
         self.model = OpenAIResponsesModel(
             model,
-            provider = OpenAIProvider( api_key=api_key )
+            provider=OpenAIProvider(api_key=api_key, base_url=base_url),
         )
         self.model_name = self.model.model_name
         self.model_vendor = 'OpenAI'

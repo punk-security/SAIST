@@ -468,6 +468,22 @@ def test_get_llm_adapter_builds_azure_foundry_adapter():
     assert adapter.thinking == "high"
 
 
+def test_get_llm_adapter_passes_openai_base_uri():
+    args = SimpleNamespace(
+        llm="openai",
+        llm_model="gpt-5-mini",
+        llm_api_key="test-key",
+        openai_base_uri="http://openai.example/v1",
+        thinking="medium",
+        ollama_base_uri="http://localhost:11434",
+    )
+
+    adapter = asyncio.run(saist_main._get_llm_adapter(args))
+
+    assert adapter.model_vendor == "OpenAI"
+    assert str(adapter.model.provider.client.base_url) == "http://openai.example/v1/"
+
+
 def test_dedupe_findings_keeps_first_for_same_priority():
     first = Finding.model_validate(
         {

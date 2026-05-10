@@ -206,6 +206,24 @@ def test_parse_args_accepts_disabled_thinking(monkeypatch, tmp_path):
     assert args.thinking == "disabled"
 
 
+def test_parse_args_accepts_open_ai_baseuri_alias(monkeypatch, tmp_path):
+    args = parse_with(
+        monkeypatch,
+        [
+            "--llm",
+            "openai",
+            "--llm-api-key",
+            "test-key",
+            "--open-ai-baseuri",
+            "http://openai.example/v1",
+            "filesystem",
+            str(tmp_path),
+        ],
+    )
+
+    assert args.openai_base_uri == "http://openai.example/v1"
+
+
 def test_parse_args_accepts_azure_foundry_without_generic_api_key(monkeypatch, tmp_path):
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/openai/v1/")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY", "azure-key")

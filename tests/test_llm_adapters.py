@@ -69,6 +69,16 @@ def test_openai_adapter_uses_responses_model_for_thinking_support():
     assert adapter.get_model_options()["thinking"] == "high"
 
 
+def test_openai_adapter_uses_custom_base_url():
+    adapter = OpenAiAdapter(
+        model="gpt-5-mini",
+        api_key="test-key",
+        base_url="http://openai.example/v1",
+    )
+
+    assert str(adapter.model.provider.client.base_url) == "http://openai.example/v1/"
+
+
 def test_azure_foundry_adapter_uses_responses_model_and_azure_provider():
     adapter = AzureFoundryAdapter(
         model="gpt-5-mini",

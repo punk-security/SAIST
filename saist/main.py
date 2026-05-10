@@ -405,7 +405,12 @@ async def _get_llm_adapter(args) -> BaseLlmAdapter:
         llm = DeepseekAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: deepseek Model: {llm.model_name}")
     elif args.llm ==  'openai':
-        llm = OpenAiAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
+        llm = OpenAiAdapter(
+            api_key=args.llm_api_key,
+            model=model,
+            base_url=args.openai_base_uri,
+            thinking=thinking,
+        )
         logger.debug(f"Using LLM: openai Model: {llm.model_name}")
     elif args.llm ==  'gemini':
         llm = GeminiAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)

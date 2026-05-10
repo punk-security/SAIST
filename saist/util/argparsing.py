@@ -169,7 +169,7 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--openai-base-uri", type=str, help = "Base uri of openai to use any compatable service",
+    "--openai-base-uri", "--open-ai-baseuri", type=str, help = "Base uri of openai to use any compatable service",
     envvar="SAIST_OPENAI_BASE_URI", action=EnvDefault, required=False
     )
 
