@@ -1,10 +1,11 @@
-pydantic==2.11.7
+pydantic==2.12.5
 requests==2.32.4
 GitPython==3.1.44
 python-dotenv==1.1.1
-pydantic-ai==0.3.7
+pydantic-ai-slim[anthropic,bedrock,google,openai]==1.93.0
 aiofiles==24.1.0
 rich==14.0.0
 flask==3.1.1
 ollama==0.5.1
 gitignore-parser==0.1.13
+reportlab==4.5.0

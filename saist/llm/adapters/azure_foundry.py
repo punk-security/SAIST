@@ -3,22 +3,28 @@ from typing import Optional
 from llm.adapters import BaseLlmAdapter
 
 from pydantic_ai.models.openai import OpenAIResponsesModel
-from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.providers.azure import AzureProvider
 
-class OpenAiAdapter(BaseLlmAdapter):
+
+class AzureFoundryAdapter(BaseLlmAdapter):
     def __init__(
         self,
         model: str = None,
         api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
+        azure_endpoint: Optional[str] = None,
+        api_version: Optional[str] = None,
         thinking: str = "medium",
     ):
         super().__init__(thinking=thinking)
         if model is None:
-            model = "gpt-4o"
+            model = "gpt-5-mini"
         self.model = OpenAIResponsesModel(
             model,
-            provider=OpenAIProvider(api_key=api_key, base_url=base_url),
+            provider=AzureProvider(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version=api_version,
+            ),
         )
         self.model_name = self.model.model_name
-        self.model_vendor = 'OpenAI'
+        self.model_vendor = "Azure AI Foundry"

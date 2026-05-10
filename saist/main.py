@@ -2,13 +2,14 @@
 import asyncio
 import logging
 import os
-from typing import Optional
+from typing import Callable, Optional
 
 from dotenv import load_dotenv
-from latex import Latex
+from reportlab_pdf import ReportLabPdf
 
 from llm.adapters import BaseLlmAdapter
 from llm.adapters.anthropic import AnthropicAdapter
+from llm.adapters.azure_foundry import AzureFoundryAdapter
 from llm.adapters.bedrock import BedrockAdapter
 from llm.adapters.deepseek import DeepseekAdapter
 from llm.adapters.faike import FaikeAdapter
@@ -32,6 +33,14 @@ from util.git import parse_unified_diff
 from util.output import print_banner, write_csv
 from util.poem import poem
 from util.prompts import prompts
+from util.skills import (
+    format_analysis_skills,
+    generate_skill_files,
+    load_analysis_skills,
+    project_root_from_args,
+    resolve_skills_dir,
+    skills_prompt_digest,
+)
 
 from web import FindingsServer
 
@@ -44,17 +53,59 @@ load_dotenv(".env")
 
 logger = logging.getLogger("saist")
 
-async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch_text, disable_tools: bool) -> Optional[list[Finding]]:
+
+class CoverageTrackingScm:
+    def __init__(self, scm: Scm):
+        self.scm = scm
+        self.files_read: set[str] = set()
+
+    async def read_file_contents(self, filename: str):
+        contents = await self.scm.read_file_contents(filename)
+        if contents is not None:
+            self.files_read.add(filename)
+        return contents
+
+    async def list_files(self) -> list[str]:
+        return await self.scm.list_files()
+
+    async def regex_search(
+        self,
+        pattern: str,
+        file_pattern: str = "**/*",
+        max_results: int = 100,
+    ) -> list[dict[str, str | int]]:
+        results = await self.scm.regex_search(pattern, file_pattern, max_results)
+        for result in results:
+            filename = result.get("filename") if isinstance(result, dict) else None
+            if filename:
+                self.files_read.add(str(filename))
+        return results
+
+    def tool_functions(self) -> list[Callable]:
+        return [self.read_file_contents, self.list_files, self.regex_search]
+
+
+def scm_detect_prompt(scm: Scm) -> str:
+    return scm.detect_prompt() if hasattr(scm, "detect_prompt") else FilesystemAdapter.DETECT_PROMPT
+
+
+def scm_summary_prompt(scm: Scm) -> str:
+    return scm.summary_prompt() if hasattr(scm, "summary_prompt") else FilesystemAdapter.SUMMARY_PROMPT
+
+async def analyze_single_file(scm: Scm, adapter: BaseLlmAdapter, filename, patch_text, disable_tools: bool, analysis_skills: str = "") -> Optional[list[Finding]]:
     """
     Analyzes a SINGLE file diff with OpenAI, returning a Findings object or None on error.
     """
-    system_prompt = prompts.DETECT
+    system_prompt = prompts.detect(scm_detect_prompt(scm))
+    if analysis_skills:
+        system_prompt = f"{system_prompt}\n\n{analysis_skills}"
+
     logger.debug(f"Processing {filename}")
     prompt = (
         f"\n\nFile: {filename}\n{patch_text}\n"
     )
     try:
-        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [] if disable_tools else [scm.read_file_contents])).findings
+        return (await adapter.prompt_structured(system_prompt, prompt, Findings, [] if disable_tools else scm.tool_functions())).findings
     except Exception as e:
         logger.error(f"[Error] File '{filename}': {e}")
         return None
@@ -79,20 +130,231 @@ async def context_from_finding(scm: Scm, finding: Finding, context_size: int = 3
 
     return "\n".join(context), start, end
 
-def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Finding]) -> str:
+def generate_summary_from_findings(adapter: BaseLlmAdapter, findings: list[Finding], scm_prompt: str = "") -> str:
     """
     Uses OpenAI to generate a summary of all findings to be used as the PR review body.
     """
-    system_prompt = prompts.SUMMARY
+    system_prompt = prompts.summary(scm_prompt)
     prompt = ""
     for f in findings:
-        prompt += f"- **File**: `{f.file}`\n  - **Issue**: {f.issue}\n  - **Recommendation**: {f.recommendation}\n\n"
+        validation_steps = "\n".join(f"    - {step}" for step in f.validation_steps) or "    - Not provided"
+        prompt += (
+            f"- **File**: `{f.file}`\n"
+            f"  - **Issue**: {f.issue}\n"
+            f"  - **Recommendation**: {f.recommendation}\n"
+            f"  - **Validation steps**:\n{validation_steps}\n\n"
+        )
 
     try:
         return adapter.prompt(system_prompt, prompt)
     except Exception as e:
         logger.error(f"[Error generating summary] {e}")
         return "Security issues found. Please review the inline comments."
+
+
+def build_finding_review_body(finding: Finding) -> str:
+    priority = "LOW"
+    if finding.priority > 4:
+        priority = "MEDIUM"
+    if finding.priority > 7:
+        priority = "HIGH"
+    if finding.priority > 8:
+        priority = "CRITICAL"
+
+    return (
+        f"**Security Issue:** {finding.issue}\n\n"
+        f"**Priority:** {priority}\n\n"
+        f"**CWE:** {finding.cwe}\n\n"
+        f"**Recommendation:** {finding.recommendation or 'None provided.'}\n\n"
+        f"**Validation Steps:**\n{format_validation_steps(finding.validation_steps)}\n\n"
+        f"**Snippet**: `{finding.snippet}`\n\n"
+    )
+
+
+def format_validation_steps(validation_steps: list[str]) -> str:
+    if not validation_steps:
+        return "None provided."
+    return "\n".join(f"{index}. {step}" for index, step in enumerate(validation_steps, start=1))
+
+
+def build_filesystem_review_comments(findings: list[Finding]) -> list[dict]:
+    comments = []
+    for finding in findings:
+        if not finding.file or not finding.snippet or not finding.issue:
+            continue
+        comments.append(
+            {
+                "path": finding.file,
+                "position": max(1, finding.line_number),
+                "body": build_finding_review_body(finding),
+            }
+        )
+    return comments
+
+
+def build_diff_review_comments(findings: list[Finding], file_line_maps: dict) -> list[dict]:
+    comments = []
+    for finding in findings:
+        diff_position = file_line_maps[finding.file][finding.line_number]
+        comments.append(
+            {
+                "path": finding.file,
+                "position": diff_position - 1,
+                "body": build_finding_review_body(finding),
+            }
+        )
+    return comments
+
+
+def dedupe_findings(findings: list[Finding]) -> list[Finding]:
+    deduped: dict[tuple[str, int], Finding] = {}
+    order: list[tuple[str, int]] = []
+
+    for finding in findings:
+        key = (finding.file, finding.line_number)
+        existing = deduped.get(key)
+        if existing is None:
+            deduped[key] = finding
+            order.append(key)
+            continue
+
+        if finding.priority > existing.priority:
+            deduped[key] = finding
+
+    return [deduped[key] for key in order]
+
+
+async def generate_findings_with_filesystem_tools(
+    scm: Scm,
+    llm: BaseLlmAdapter,
+    filenames: list[str],
+    disable_tools: bool,
+    analysis_skills: str = "",
+) -> tuple[list[Finding], set[str]]:
+    tracked_scm = CoverageTrackingScm(scm)
+    system_prompt = prompts.detect(scm_detect_prompt(scm))
+    if analysis_skills:
+        system_prompt = f"{system_prompt}\n\n{analysis_skills}"
+
+    file_list = "\n".join(f"- {filename}" for filename in filenames)
+    user_prompt = f"""
+Application file inventory:
+{file_list}
+
+Perform a penetration test style application security review of this codebase.
+Use the available tools to inspect files before reporting findings.
+Return only findings that are supported by code you inspected.
+"""
+
+    result = await llm.prompt_structured(
+        system_prompt,
+        user_prompt,
+        Findings,
+        [] if disable_tools else tracked_scm.tool_functions(),
+    )
+    return result.findings, tracked_scm.files_read
+
+
+async def generate_findings_with_filesystem_tools_iterations(
+    scm: Scm,
+    llm: BaseLlmAdapter,
+    filenames: list[str],
+    disable_tools: bool,
+    analysis_skills: str,
+    iterations: int,
+    max_concurrent: int,
+    disable_caching: bool = True,
+    cache_folder: str = ".cache",
+) -> tuple[list[Finding], set[str]]:
+    semaphore = asyncio.Semaphore(max(1, max_concurrent))
+    if disable_caching is False:
+        os.makedirs(cache_folder, exist_ok=True)
+
+    overall_progress = Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+    )
+
+    iteration_progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[blue]{task.description}"),
+        transient=True,
+    )
+
+    progress_group = Group(
+        overall_progress,
+        iteration_progress,
+    )
+
+    async def run_uncached_iteration(iteration: int):
+        return await generate_findings_with_filesystem_tools(
+            scm=scm,
+            llm=llm,
+            filenames=filenames,
+            disable_tools=disable_tools,
+            analysis_skills=analysis_skills,
+        )
+
+    async def run_cached_iteration(iteration: int):
+        cache_hash = await hash_files(scm, filenames, extra=analysis_skills)
+        cache_file = os.path.join(cache_folder, f"{iteration}-{cache_hash}.json")
+        if os.path.exists(cache_file):
+            return filesystem_tool_findings_from_cache_file(cache_file)
+
+        findings, files_read = await run_uncached_iteration(iteration)
+        store_filesystem_tool_findings_to_cache_file(
+            iteration=iteration,
+            filenames=filenames,
+            findings=findings,
+            files_read=files_read,
+            cache_file=cache_file,
+        )
+        return findings, files_read
+
+    async def run_iteration(iteration: int, overall_task):
+        async with semaphore:
+            iteration_task = iteration_progress.add_task(
+                description=f"Iteration {iteration}/{iterations}...",
+                transient=True,
+            )
+            try:
+                if disable_caching:
+                    return await run_uncached_iteration(iteration)
+                return await run_cached_iteration(iteration)
+            finally:
+                iteration_progress.remove_task(iteration_task)
+                iteration_progress.refresh()
+                overall_progress.update(overall_task, advance=1)
+
+    with Live(progress_group):
+        overall_task = overall_progress.add_task(
+            f"Running {iterations} tool-driven analysis iteration{'s' if iterations != 1 else ''}...",
+            total=iterations,
+            start=True,
+        )
+        try:
+            results = await asyncio.gather(*(run_iteration(iteration, overall_task) for iteration in range(1, iterations + 1)))
+        finally:
+            overall_progress.stop()
+            iteration_progress.stop()
+
+    all_findings = []
+    files_read = set()
+    for findings, iteration_files_read in results:
+        all_findings.extend(findings)
+        files_read.update(iteration_files_read)
+
+    return all_findings, files_read
+
+
+def print_coverage(files_read: set[str], files_in_scope: list[str]):
+    total = len(files_in_scope)
+    read_count = len(files_read.intersection(files_in_scope))
+    percent = (read_count / total * 100) if total else 0
+    print(f"📈 LLM file coverage: {read_count}/{total} files read ({percent:.1f}%)\n")
 
 def _get_scm_adapter(args) -> BaseScmAdapter:
     if args.SCM == 'github':
@@ -122,28 +384,43 @@ def _get_scm_adapter(args) -> BaseScmAdapter:
 async def _get_llm_adapter(args) -> BaseLlmAdapter:
 
     model = args.llm_model
+    thinking = args.thinking
 
     if args.llm == 'anthropic':
-        llm = AnthropicAdapter( api_key = args.llm_api_key, model=model)
+        llm = AnthropicAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: anthropic Model: {llm.model_name}")
+    elif args.llm == 'azure-foundry':
+        llm = AzureFoundryAdapter(
+            api_key=args.llm_api_key,
+            model=model,
+            azure_endpoint=args.azure_openai_endpoint,
+            api_version=args.azure_openai_api_version,
+            thinking=thinking,
+        )
+        logger.debug(f"Using LLM: Azure AI Foundry Model: {llm.model_name}")
     elif args.llm == 'bedrock':
-        llm = BedrockAdapter( api_key = args.llm_api_key, model=model)
+        llm = BedrockAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: AWS bedrock Model: {llm.model_name}")
     elif args.llm == 'deepseek':
-        llm = DeepseekAdapter(api_key = args.llm_api_key, model=model)
+        llm = DeepseekAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: deepseek Model: {llm.model_name}")
     elif args.llm ==  'openai':
-        llm = OpenAiAdapter(api_key = args.llm_api_key, model=model)
+        llm = OpenAiAdapter(
+            api_key=args.llm_api_key,
+            model=model,
+            base_url=args.openai_base_uri,
+            thinking=thinking,
+        )
         logger.debug(f"Using LLM: openai Model: {llm.model_name}")
     elif args.llm ==  'gemini':
-        llm = GeminiAdapter(api_key = args.llm_api_key, model=model)
+        llm = GeminiAdapter(api_key=args.llm_api_key, model=model, thinking=thinking)
         logger.debug(f"Using LLM: gemini Model: {llm.model_name}")
     elif args.llm == 'ollama':
-        llm = OllamaAdapter(api_key = args.llm_api_key, base_url=args.ollama_base_uri, model=model)
+        llm = OllamaAdapter(api_key=args.llm_api_key, base_url=args.ollama_base_uri, model=model, thinking=thinking)
         await llm.initialize()
         logger.debug(f"Using LLM: ollama Model: {llm.model_name}")
     elif args.llm == 'faike':
-        llm = FaikeAdapter("", "Fake LLM")
+        llm = FaikeAdapter("", "Fake LLM", thinking=thinking)
         logger.debug("Using LLM: Faike AI")
     else:
         raise Exception("Could not determine a suitable LLM to use")
@@ -179,132 +456,200 @@ async def main():
         print("✨ Poem generation completed.\n")
         exit(0)
 
+    project_root = project_root_from_args(args)
+    skills_dir = resolve_skills_dir(project_root, args.skills_path)
+
+    if args.generate_skills:
+        print("🧭 Generating SAIST analysis skills...")
+        result = await generate_skill_files(
+            llm=llm,
+            project_root=project_root,
+            skills_dir=skills_dir,
+            max_files=args.skills_sample_files,
+            max_file_bytes=args.skills_sample_bytes,
+            overwrite=args.overwrite_skills,
+        )
+        print(f"✅ Sampled {result.sampled_files} files from {project_root}")
+        print(f"✅ Wrote {len(result.written)} skill files to {result.skills_dir}")
+        if result.skipped:
+            print(f"ℹ️ Skipped {len(result.skipped)} existing skill files. Use --overwrite-skills to replace them.")
+        return
+
     print("🔎 Initializing SCM adapter...")
     scm_adapter = _get_scm_adapter(args)
     scm = Scm(adapter=scm_adapter)
     print(f"✅ Using SCM: {args.SCM}\n")
 
-    # 1) Get changed files
-    print("📂 Fetching changed files...")
-    changed_files = scm.get_changed_files()
-    if not changed_files:
-        print("⚠️ No changed files detected. Exiting.")
-        return
-    print(f"✅ Detected {len(changed_files)} changed files\n")
+    shallow_filesystem_scan = args.SCM == "filesystem" and not args.deep
+    analysis_skills = ""
+    if not args.disable_skills:
+        loaded_skills = load_analysis_skills(skills_dir, args.skills_max_bytes)
+        if shallow_filesystem_scan and not loaded_skills:
+            print("🧭 No SAIST skill files found. Generating application skills for this filesystem scan...")
+            result = await generate_skill_files(
+                llm=llm,
+                project_root=project_root,
+                skills_dir=skills_dir,
+                max_files=args.skills_sample_files,
+                max_file_bytes=args.skills_sample_bytes,
+                overwrite=False,
+            )
+            print(f"✅ Sampled {result.sampled_files} files from {project_root}")
+            print(f"✅ Wrote {len(result.written)} skill files to {result.skills_dir}")
+            if result.skipped:
+                print(f"ℹ️ Skipped {len(result.skipped)} existing skill files.")
+            loaded_skills = load_analysis_skills(skills_dir, args.skills_max_bytes)
 
-    # 2) Gather only relevant app code diffs
-    print("🧹 Filtering relevant app code diffs...")
-    file_line_maps = {}
-    file_new_lines_text = {}
-    app_files = []
+        if loaded_skills:
+            analysis_skills = format_analysis_skills(loaded_skills)
+            print(f"🧠 Loaded {len(loaded_skills)} SAIST skill files from {skills_dir}\n")
+        else:
+            logging.debug(f"No SAIST skill files found under {skills_dir}")
+    else:
+        logging.debug("SAIST skill loading disabled")
 
     filter_rules = FilterRules(args.include, args.exclude)
-    for f in changed_files:
-        filename = f["filename"]
-        patch_text = f.get("patch", "")
-        if not patch_text:
-            logging.debug(f"Skipped file {filename} as it contains no patch text")
-            continue 
+    review_comments = []
 
-        if not filter_rules.filename_included(filename):
-            logging.debug(f"Skipped file {filename} as it is not included in rules")
-            continue
+    if shallow_filesystem_scan:
+        print("📂 Listing application files...")
+        all_files = await scm.list_files()
+        app_filenames = [filename for filename in all_files if filter_rules.filename_included(filename)]
 
-        if not args.skip_line_length_check:
-            if filter_rules.file_exceeds_line_length_limit(file_content=await scm.read_file_contents(filename), patch_text=patch_text, max_line_length=args.max_line_length):
-                logging.debug(f"Skipped file {filename} as it contains lines that exceed the maximum line length ({args.max_line_length})")
+        if not app_filenames:
+            print("⚠️ No app files to analyze. Exiting.")
+            return
+
+        print(f"✅ Prepared {len(app_filenames)} app files for tool-driven analysis.\n")
+
+        if args.dry_run:
+            print("⚠️  --dry-run flag passed, exiting without analyzing files.")
+            exit(0)
+
+        print(f"🔍 Analyzing application with LLM tool use ({args.iterations} iteration{'s' if args.iterations != 1 else ''})...")
+        all_findings, files_read = await generate_findings_with_filesystem_tools_iterations(
+            scm=scm,
+            llm=llm,
+            filenames=app_filenames,
+            disable_tools=args.disable_tools,
+            analysis_skills=analysis_skills,
+            iterations=args.iterations,
+            max_concurrent=args.llm_rate_limit,
+            disable_caching=args.disable_caching,
+            cache_folder=args.cache_folder,
+        )
+        print_coverage(files_read, app_filenames)
+
+        if not all_findings:
+            print("✅ No findings reported. Exiting.\n")
+            return
+
+    else:
+
+        # 1) Get changed files
+        print("📂 Fetching changed files...")
+        changed_files = scm.get_changed_files()
+        if not changed_files:
+            print("⚠️ No changed files detected. Exiting.")
+            return
+        print(f"✅ Detected {len(changed_files)} changed files\n")
+
+        # 2) Gather only relevant app code diffs
+        print("🧹 Filtering relevant app code diffs...")
+        file_line_maps = {}
+        file_new_lines_text = {}
+        app_files = []
+
+        for f in changed_files:
+            filename = f["filename"]
+            patch_text = f.get("patch", "")
+            if not patch_text:
+                logging.debug(f"Skipped file {filename} as it contains no patch text")
+                continue 
+
+            if not filter_rules.filename_included(filename):
+                logging.debug(f"Skipped file {filename} as it is not included in rules")
                 continue
 
-        line_map, new_lines_text = parse_unified_diff(patch_text)
-        file_line_maps[filename] = line_map
-        file_new_lines_text[filename] = new_lines_text
-        app_files.append((filename, patch_text))
+            if not args.skip_line_length_check:
+                if filter_rules.file_exceeds_line_length_limit(file_content=await scm.read_file_contents(filename), patch_text=patch_text, max_line_length=args.max_line_length):
+                    logging.debug(f"Skipped file {filename} as it contains lines that exceed the maximum line length ({args.max_line_length})")
+                    continue
 
-    if not app_files:
-        print("⚠️ No app code diffs to analyze. Exiting.")
-        return
-    print(f"✅ Prepared {len(app_files)} app files for analysis.\n")
+            line_map, new_lines_text = parse_unified_diff(patch_text)
+            file_line_maps[filename] = line_map
+            file_new_lines_text[filename] = new_lines_text
+            app_files.append((filename, patch_text))
 
-    app_filenames = list((filename for filename,_ in app_files))
-    logging.debug(f"Files to process: {app_filenames}")
+        if not app_files:
+            print("⚠️ No app code diffs to analyze. Exiting.")
+            return
+        print(f"✅ Prepared {len(app_files)} app files for analysis.\n")
 
-    if args.dry_run:
-        print("⚠️  --dry-run flag passed, exiting without analyzing files.")
-        exit(0)
+        app_filenames = list((filename for filename,_ in app_files))
+        logging.debug(f"Files to process: {app_filenames}")
 
-    # 3) Analyze each file in parallel
-    print("🔍 Analyzing files for security issues...")
-    max_workers = min(args.llm_rate_limit, len(app_files))
-    logging.debug(f"{max_workers=}")
-    all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools, args.disable_caching, args.cache_folder)
+        if args.dry_run:
+            print("⚠️  --dry-run flag passed, exiting without analyzing files.")
+            exit(0)
 
-    if not all_findings:
-        print("✅ No findings reported. Exiting.\n")
-        return
-    print(f"🚨 Analysis complete! Identified {len(all_findings)} potential issues.\n")
+        # 3) Analyze each file in parallel
+        print("🔍 Analyzing files for security issues...")
+        max_workers = min(args.llm_rate_limit, len(app_files))
+        logging.debug(f"{max_workers=}")
+        all_findings = await generate_findings(scm, llm, app_files, max_workers, args.disable_tools, args.disable_caching, args.cache_folder, analysis_skills)
 
-    # 4) Build review comments from snippet-based findings
-    review_comments = []
-    all_findings.sort(key=lambda x: x.priority,reverse=True)
-    
-    for item in all_findings:
-        item.line_number = -1 #set to -1 for filtering. Gets changed later if finding is valid
-        file_name = item.file
-        snippet = item.snippet
-        issue = item.issue
-        priority = "LOW"
-        if item.priority > 4:
-            priority = "MEDIUM"
-        if item.priority > 7:
-            priority = "HIGH"
-        if item.priority > 8:
-            priority = "CRITICAL"
-        cwe = item.cwe
-        recommendation = item.recommendation
+        if not all_findings:
+            print("✅ No findings reported. Exiting.\n")
+            return
 
-        # Basic checks
-        if not file_name or not snippet or not issue:
-            continue
-        if file_name not in file_line_maps:
-            # Possibly flagged a file that doesn't exist in the PR
-            continue
+        # 4) Build review comments from snippet-based findings
+        all_findings.sort(key=lambda x: x.priority,reverse=True)
+        
+        for item in all_findings:
+            item.line_number = -1 #set to -1 for filtering. Gets changed later if finding is valid
+            file_name = item.file
+            snippet = item.snippet
+            issue = item.issue
 
-        line_map = file_line_maps[file_name]
-        new_lines_text = file_new_lines_text[file_name]
+            # Basic checks
+            if not file_name or not snippet or not issue:
+                continue
+            if file_name not in file_line_maps:
+                # Possibly flagged a file that doesn't exist in the PR
+                continue
 
-        # Attempt to find which 'new_line' has the snippet
-        matched_new_line = None
-        for ln, code_text in new_lines_text.items():
-            if snippet in code_text:
-                matched_new_line = ln
-                break
+            new_lines_text = file_new_lines_text[file_name]
 
-        if not matched_new_line:
-            # If we can't find the snippet in the patch, skip
-            continue
+            # Attempt to find which 'new_line' has the snippet
+            matched_new_line = None
+            for ln, code_text in new_lines_text.items():
+                if snippet in code_text:
+                    matched_new_line = ln
+                    break
 
-        diff_position = line_map[matched_new_line]
-        body_text = (
-            f"**Security Issue:** {issue}\n\n"
-            f"**Priority:** {priority}\n\n"
-            f"**CWE:** {cwe}\n\n"
-            f"**Recommendation:** {recommendation or 'None provided.'}\n\n"
-            f"**Snippet**: `{snippet}`\n\n"
-        )
+            if not matched_new_line:
+                # If we can't find the snippet in the patch, skip
+                continue
 
-        review_comments.append({
-            "path": file_name,
-            "position": diff_position - 1,
-            "body": body_text
-        })
+            item.line_number = matched_new_line
 
-        item.line_number = matched_new_line
+        all_findings = list([x for x in all_findings if x.line_number != -1])
 
-    all_findings = list([x for x in all_findings if x.line_number != -1])
+
+    all_findings = dedupe_findings(all_findings)
+    all_findings.sort(key=lambda x: x.priority, reverse=True)
 
     if not all_findings:
         print("No issues detected")
         exit(0)
+
+    print(f"🚨 Analysis complete! Identified {len(all_findings)} potential issues.\n")
+
+    if shallow_filesystem_scan:
+        review_comments = build_filesystem_review_comments(all_findings)
+    else:
+        review_comments = build_diff_review_comments(all_findings, file_line_maps)
 
     if args.interactive:
         s = Shell(llm, scm, all_findings)
@@ -312,7 +657,7 @@ async def main():
         all_findings = s.findings
 
 
-    comment = await generate_summary_from_findings(llm, all_findings)
+    comment = await generate_summary_from_findings(llm, all_findings, scm_summary_prompt(scm))
     scm.create_review(
         comment=comment,
         review_comments=review_comments,
@@ -345,7 +690,7 @@ async def main():
         w = FindingsServer(args.web_host, args.web_port)
         w.run(enriched_findings)
 
-    if args.pdf or args.tex:
+    if args.pdf:
         findings_context = []
         for finding in all_findings:
             try:
@@ -361,21 +706,25 @@ async def main():
                 findings_context.append(fc)
             except:
                 continue
-        l = Latex(llm, args.project_name, findings_context, comment)
-        l.run(args)
+        r = ReportLabPdf(llm, args.project_name, findings_context, comment)
+        r.run(args)
 
     if args.ci and len(all_findings) > 0:
         exit(1)
 
-async def process_file(scm: Scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder):
+async def process_file(scm: Scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder, analysis_skills):
     start = asyncio.get_event_loop().time()
     if disable_caching is True: 
-        result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
+        result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools, analysis_skills)
     else:
         hash: str = await hash_file(scm, filename)
-        cache_file = os.path.join(cache_folder, hash + ".json")
+        cache_filename = hash + ".json"
+        if analysis_skills:
+            cache_filename = hash + "-" + skills_prompt_digest(analysis_skills) + ".json"
+
+        cache_file = os.path.join(cache_folder, cache_filename)
         if not os.path.exists(cache_file):
-            result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools)
+            result = await analyze_single_file(scm, llm, filename, patch_text, disable_tools, analysis_skills)
             store_findings_to_cache_file(filename, result, cache_file)
         else:
             result = findings_from_cache_file(cache_file)
@@ -385,7 +734,7 @@ async def process_file(scm: Scm, llm, filename, patch_text, disable_tools, disab
 
     return result
 
-async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, disable_caching, cache_folder):
+async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, disable_caching, cache_folder, analysis_skills):
     if disable_caching is False:
         if not os.path.exists(cache_folder) or not os.path.isdir(cache_folder):
             os.makedirs(cache_folder, exist_ok=True)
@@ -427,7 +776,7 @@ async def generate_findings(scm, llm, app_files, max_concurrent, disable_tools, 
         tasks = []
         overall_task = overall_progress.add_task(f"Analyzing {len(app_files)} files...", total=len(app_files), start=True) # Add a task
         for filename, patch_text in app_files:
-            wrapper_func = task_progress_wrapper(process_file, overall_progress, overall_task, file_progress, filename, semaphore)(scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder)
+            wrapper_func = task_progress_wrapper(process_file, overall_progress, overall_task, file_progress, filename, semaphore)(scm, llm, filename, patch_text, disable_tools, disable_caching, cache_folder, analysis_skills)
             tasks.append(
                 wrapper_func
             )

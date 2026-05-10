@@ -28,4 +28,4 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         with:
           push: true
-          targets: "full,lite"
+          targets: "release"

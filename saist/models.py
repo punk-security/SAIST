@@ -8,6 +8,13 @@ class Finding(BaseModel):
     title: Annotated[str, Field(description= "a short title describing the issue") ]
     issue: str
     recommendation: str
+    validation_steps: Annotated[
+        list[str],
+        Field(
+            default_factory=list,
+            description="concrete steps a reviewer can follow to validate the issue is exploitable",
+        ),
+    ]
     cwe: Annotated[str, Field(description= "CWE id, should conform to CWE-XX or CWE-XXX where X is a number") ]
     priority: int
     line_number: int

@@ -1,8 +1,9 @@
 import argparse
 from os import linesep, environ, cpu_count
 import sys
-from shutil import which
 from dotenv import load_dotenv
+from llm.adapters import THINKING_CHOICES
+from util.skills import DEFAULT_SKILL_MAX_BYTES, DEFAULT_SKILL_SAMPLE_BYTES, DEFAULT_SKILL_SAMPLE_FILES, DEFAULT_SKILLS_PATH
 
 load_dotenv(".env")
 
@@ -47,6 +48,8 @@ Examples:{linesep}
 {runtime} --llm ollama --interactive filesystem <path>{linesep}
 > Scan local code folder with anthropic and get web server findings
 {runtime} --llm anthropic --interactive filesystem <path>{linesep}
+> Generate project-specific analysis skills for future scans
+{runtime} --llm openai --generate-skills filesystem <path>{linesep}
 {linesep}
 """,
 )
@@ -95,10 +98,10 @@ git_parser.add_argument("--ref-to-compare", type=str, help = "Git ref to compare
     )
 git_parser.add_argument(
     "--commit-for-compare", type=str, help = "Git commit to compare from (preferred over REF if set)",
-    envvar="SAIST_GIT_BASE_COMMIT", action=EnvDefault
+    envvar="SAIST_GIT_BASE_COMMIT", action=EnvDefault, required=False
     )
 git_parser.add_argument("--commit-to-compare", type=str, help = "Git commit to compare to (preferred over REF if set)",
-    envvar="SAIST_GIT_COMPARE_COMMIT", action=EnvDefault
+    envvar="SAIST_GIT_COMPARE_COMMIT", action=EnvDefault, required=False
     )
 
 ### GITHUB
@@ -119,7 +122,7 @@ github_parser.add_argument(
 parser.add_argument(
     "--llm",
     type=str,
-    choices=["anthropic", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
+    choices=["anthropic", "azure-foundry", "bedrock", "deepseek", "gemini", "ollama", "openai", "faike"],
     required=True,
     action=EnvDefault,
     envvar="SAIST_LLM"
@@ -141,14 +144,52 @@ parser.add_argument(
     )
 
 parser.add_argument(
+    "--iterations",
+    help="Number of tool-driven filesystem analysis passes to run when --deep is not set",
+    envvar="SAIST_ITERATIONS",
+    action=EnvDefault,
+    required=False,
+    type=int,
+    default=1,
+)
+
+parser.add_argument(
+    "--thinking",
+    help="LLM thinking effort for providers supported by pydantic-ai",
+    choices=THINKING_CHOICES,
+    envvar="SAIST_THINKING",
+    action=EnvDefault,
+    required=False,
+    default="medium",
+)
+
+parser.add_argument(
     "--ollama-base-uri", type=str, help = "Base uri of ollama",
     envvar="SAIST_OLLAMA_BASE_URI", action=EnvDefault, default = "http://localhost:11434"
     )
 
 parser.add_argument(
-    "--openai-base-uri", type=str, help = "Base uri of openai to use any compatable service",
+    "--openai-base-uri", "--open-ai-baseuri", type=str, help = "Base uri of openai to use any compatable service",
     envvar="SAIST_OPENAI_BASE_URI", action=EnvDefault, required=False
     )
+
+parser.add_argument(
+    "--azure-openai-endpoint",
+    type=str,
+    help="Azure AI Foundry or Azure OpenAI endpoint (can be set with AZURE_OPENAI_ENDPOINT)",
+    envvar="AZURE_OPENAI_ENDPOINT",
+    action=EnvDefault,
+    required=False,
+)
+
+parser.add_argument(
+    "--azure-openai-api-version",
+    type=str,
+    help="Azure OpenAI API version for non-v1 endpoints (can be set with OPENAI_API_VERSION)",
+    envvar="OPENAI_API_VERSION",
+    action=EnvDefault,
+    required=False,
+)
 
 parser.add_argument(
     "--interactive", help = "Spawn an interactive prompt with the LLM at the end",
@@ -157,6 +198,11 @@ parser.add_argument(
 
 parser.add_argument(
     "--disable-tools", help="Disable usage of tools during code analysis (this is a good cost saving)",
+    required=False, action="store_true"
+    )
+
+parser.add_argument(
+    "--deep", help="For filesystem scans, analyze each file individually instead of using the tool-driven whole-application scan",
     required=False, action="store_true"
     )
 
@@ -191,16 +237,6 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--tex", help = "Write results of TeX file",
-    required=False, action='store_true'
-    )
-
-parser.add_argument(
-    "--tex-filename", type=str, help = "Filename of TeX file",
-    envvar="SAIST_TEX_FILENAME", action=EnvDefault, required=False, default="report.tex"
-    )
-
-parser.add_argument(
     "--pdf", help = "Write results of PDF report",
     required=False, action='store_true'
     )
@@ -218,6 +254,41 @@ parser.add_argument(
 parser.add_argument(
     "--cache-folder", type=str, help = "Folder name for local caching",
     envvar="SAIST_CACHE_FOLDER", action=EnvDefault, required=False, default="SAISTCache"
+    )
+
+parser.add_argument(
+    "--skills-path", type=str, help = "Folder containing SAIST analysis skill Markdown files",
+    envvar="SAIST_SKILLS_PATH", action=EnvDefault, required=False, default=DEFAULT_SKILLS_PATH
+    )
+
+parser.add_argument(
+    "--disable-skills", help = "Do not load SAIST analysis skill files during scanning",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--generate-skills", help = "Generate SAIST analysis skill files for this project and exit",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--overwrite-skills", help = "Replace existing skill files when used with --generate-skills",
+    required=False, action='store_true'
+    )
+
+parser.add_argument(
+    "--skills-max-bytes", type=int, help = "Maximum total bytes of skill guidance to load into analysis prompts",
+    envvar="SAIST_SKILLS_MAX_BYTES", action=EnvDefault, required=False, default=DEFAULT_SKILL_MAX_BYTES
+    )
+
+parser.add_argument(
+    "--skills-sample-files", type=int, help = "Maximum number of project files to sample when generating skills",
+    envvar="SAIST_SKILLS_SAMPLE_FILES", action=EnvDefault, required=False, default=DEFAULT_SKILL_SAMPLE_FILES
+    )
+
+parser.add_argument(
+    "--skills-sample-bytes", type=int, help = "Maximum bytes to read from each sampled file when generating skills",
+    envvar="SAIST_SKILLS_SAMPLE_BYTES", action=EnvDefault, required=False, default=DEFAULT_SKILL_SAMPLE_BYTES
     )
 
 parser.add_argument(
@@ -265,7 +336,7 @@ def parse_args():
     if args.llm == "bedrock" and args.interactive:
         parser.error("Sorry, we dont support interactive mode with bedrock as AWS tool calling is a bit broken")
 
-    if args.llm not in [ "ollama", "bedrock", "faike" ] and args.llm_api_key is None:
+    if args.llm not in [ "azure-foundry", "ollama", "bedrock", "faike" ] and args.llm_api_key is None:
         parser.error(f"You must provide an api key with --llm-api-key if using {args.llm}")
 
     if args.llm == "ollama" and args.interactive:
@@ -273,8 +344,22 @@ def parse_args():
 
     if args.llm == "faike" and args.interactive:
         parser.error("Faike LLM: Certified non-existent AI doesn't support interactive mode")
-   
-    if args.pdf and which("latexmk") == None:
-        parser.error("Unable to find 'latexmk' binary in $PATH needed for PDF report building, cannot use --pdf flag")
+
+    if args.generate_skills and args.SCM == "poem":
+        parser.error("Cannot generate SAIST skills while using the poem command")
+
+    if args.generate_skills and args.disable_skills:
+        parser.error("Cannot use --generate-skills together with --disable-skills")
+
+    if args.SCM == "filesystem" and args.disable_tools and not args.deep:
+        parser.error("Filesystem scans without --deep require tool use. Remove --disable-tools or add --deep.")
+
+    if args.iterations < 1:
+        parser.error("--iterations must be at least 1")
+
+    if args.iterations > 1 and (args.SCM != "filesystem" or args.deep):
+        sys.stdout.write(
+            f" ⚠️ warning: --iterations only applies to filesystem scans without --deep; ignoring --iterations={args.iterations}.{linesep}"
+        )
 
     return args

@@ -1,6 +1,7 @@
 import io
 import logging
 from os import PathLike
+from pathlib import PurePosixPath
 from typing import Optional, Iterator
 
 from scm import BaseScmAdapter, File
@@ -11,11 +12,34 @@ from util.output import write_findings
 logger = logging.getLogger(__name__)
 
 class GitAdapter(BaseScmAdapter):
+    DETECT_PROMPT = """
+You are analyzing a diff of code that needs security review.
+The supplied input is a single file's unified diff from a git comparison.
+Focus on exploitable vulnerabilities introduced, exposed, or materially changed by this diff.
+Use tools to retrieve the full file and related files to validate whether the changed code is reachable, attacker-controlled, and crosses a security boundary.
+Report only vulnerabilities anchored to changed lines in the original diff. Do not report pre-existing best-practice issues unless the diff makes them exploitable or materially worse.
+For business logic changes, inspect surrounding authorization, state transition, tenancy, payment, invitation, webhook, or admin-flow code before deciding.
+"""
+
+    SUMMARY_PROMPT = """
+This summary is for a diff-based code security review.
+Summarize exploitable risks introduced or changed by the supplied diff, including business impact and affected security boundaries. Do not summarize generic best practices.
+"""
+
     async def get_file_contents(self, file_path: str):
         logger.debug(f"file_get_contents: Reading {file_path}")
-        targetfile = self.compare_commit.tree / file_path
-        with io.BytesIO(targetfile.data_stream.read()) as f:
-            return f.read().decode('utf-8')
+        clean_path = self._clean_repo_path(file_path)
+        if clean_path is None:
+            logger.warning(f"get_file_contents: rejected path outside repository: {file_path}")
+            return None
+
+        try:
+            targetfile = self.compare_commit.tree / clean_path
+            with io.BytesIO(targetfile.data_stream.read()) as f:
+                return f.read().decode('utf-8')
+        except (KeyError, ValueError, UnicodeDecodeError) as e:
+            logger.warning(f"get_file_contents: could not read {clean_path}: {e}")
+            return None
 
     def __init__(self, repo_path: Optional[PathLike]=None, base_branch: Optional[str] = None, compare_branch: Optional[str] = None, base_commit: Optional[str] = None, compare_commit: Optional[str] = None):
         self.repo_path = repo_path
@@ -60,17 +84,29 @@ class GitAdapter(BaseScmAdapter):
         return repo
 
     def _iter_diffs(self) -> Iterator[File]:
-        diffs = self.compare_commit.diff(self.base_commit, create_patch=True)
+        diffs = self.base_commit.diff(self.compare_commit, create_patch=True)
 
         for diff in diffs:
+            filename = diff.b_path or diff.a_path
             match diff.diff:
                 case bytes(data):
-                    yield File(filename=diff.a_path, patch=data.decode('UTF-8'))
+                    yield File(filename=filename, patch=data.decode('UTF-8'))
                 case data:
-                    yield File(filename=diff.a_path, patch=data)
+                    yield File(filename=filename, patch=data)
 
     def get_changed_files(self) -> list[File]:
         return list([f for f in self._iter_diffs() if f['filename'] != None])
+
+    async def list_files(self) -> list[str]:
+        """
+        Lists all blob paths at the comparison commit.
+        """
+        files = []
+        for item in self.compare_commit.tree.traverse():
+            if item.type == "blob":
+                files.append(item.path)
+
+        return sorted(files)
 
     def create_review(self, comment, review_comments, request_changes):
         write_findings(comment,review_comments,request_changes)
@@ -79,3 +115,12 @@ class GitAdapter(BaseScmAdapter):
     def likely():
         # TODO: determine logic
         return True
+
+    @staticmethod
+    def _clean_repo_path(file_path: str) -> Optional[str]:
+        path = PurePosixPath(str(file_path).replace("\\", "/"))
+
+        if path.is_absolute() or ".." in path.parts:
+            return None
+
+        return path.as_posix()

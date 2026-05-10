@@ -6,7 +6,8 @@ from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
 class AnthropicAdapter(BaseLlmAdapter):
-    def __init__(self, model: str = None, api_key: Optional[str] = None):
+    def __init__(self, model: str = None, api_key: Optional[str] = None, thinking: str = "medium"):
+        super().__init__(thinking=thinking)
         if model is None:
             model = "claude-3-7-sonnet-latest"
         self.model = AnthropicModel(

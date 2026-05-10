@@ -36,5 +36,7 @@ def write_csv(findings: Iterable[Finding], csv_path: str):
         writer = csv.DictWriter(fp, fieldnames=fieldnames)
         writer.writeheader()
         for finding in findings:
-            writer.writerow(finding.model_dump())
+            row = finding.model_dump()
+            row["validation_steps"] = json.dumps(row.get("validation_steps", []))
+            writer.writerow(row)
         print(f"Written files to {csv_path}")

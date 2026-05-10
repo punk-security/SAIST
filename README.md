@@ -30,6 +30,8 @@ We support OLLAMA for local / offline code scanning.
 - **Multi-LLM support**: `OpenAI`, `Anthropic`, `Bedrock`, `DeepSeek`, `Gemini`, `Ollama`
 - **Filesystem, Git, GitHub PR scanning modes**
 - **Pattern-based file inclusion/exclusion** using `.saist.include` and `.saist.ignore`
+- **Project-specific analysis skills** loaded from Markdown files to teach SAIST app routing, authorization, framework conventions, and other local security context
+- **LLM-generated analysis skills** for bootstrapping those files in a separate run
 - **Interactive chat** with your findings
 - **Web server** UI to view results
 - **CSV export** of findings
@@ -75,6 +77,7 @@ export SAIST_LLM_API_KEY=your-api-key
 |:-----|:--------|
 | Get a DevSecOps poem | `saist/main.py --llm openai poem` |
 | Scan a local folder | `saist/main.py --llm deepseek filesystem /path/to/code` |
+| Scan a local folder file-by-file | `saist/main.py --llm deepseek --deep filesystem /path/to/code` |
 | Scan a local folder with ollama from within docker| `docker run --network=host -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm ollama --llm-model gemma3:4b fileystem /vulnerableapp` |
 | Scan a local Git repo | `saist/main.py --llm openai git /path/to/repo` |
 | Scan a local Git repo (branch diff) | `saist/main.py --llm openai git /path/to/repo --ref-for-compare main --ref-to-compare feature-branch` |
@@ -82,6 +85,7 @@ export SAIST_LLM_API_KEY=your-api-key
 | Launch web server to view findings | `saist/main.py --llm deepseek --web filesystem /path/to/code` |
 | Interactive shell after scanning | `saist/main.py --llm ollama --interactive filesystem /path/to/code` |
 | Export findings as CSV | `saist/main.py --llm openai --csv filesystem /path/to/code` |
+| Generate analysis skills | `saist/main.py --llm openai --generate-skills filesystem /path/to/code` |
 | Scan with docker and export findings as PDF report | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm openai --pdf filesystem /vulnerableapp` |
 | Scan with docker and export findings as PDF report with a project title | `docker run -v <folder_path>:/vulnerableapp -v $PWD/reporting:/app/reporting punksecurity/saist --llm openai --pdf --project-name "Project Name" filesystem /vulnerableapp` |
 | Scan with docker and retain cache for future runs | `docker run -v <folder_path>:/vulnerableapp -v $PWD/SAISTCache:/app/SAISTCache punksecurity/saist --llm openai filesystem /vulnerableapp` |
@@ -134,21 +138,49 @@ This setup will:
 - Ignore anything under `tests/` and `docs/`
 ---
 
+## 🧠 Analysis Skills
+
+SAIST can load project-specific analysis skill files from `.saist/skills/*.md`. These files are added to the security review prompt so future scans understand application-specific details such as routing, authentication, authorization, framework conventions, data access, validation boundaries, dependencies, configuration, and security-sensitive workflows.
+
+Generate an initial set of skill files as a separate run:
+
+```bash
+saist/main.py --llm openai --generate-skills filesystem /path/to/code
+```
+
+Then review or edit the generated Markdown files and run SAIST normally. Skill files are loaded automatically on future scans:
+
+```bash
+saist/main.py --llm openai filesystem /path/to/code
+```
+
+Useful options:
+
+| Option | Description |
+|:------|:------------|
+| `--skills-path` | Folder containing skill Markdown files. Defaults to `.saist/skills` under the scanned project. |
+| `--generate-skills` | Ask the configured LLM to generate skill files and then exit. |
+| `--overwrite-skills` | Replace existing skill files during generation. Without this, existing files are preserved. |
+| `--disable-skills` | Do not load skill files during analysis. |
+| `--skills-max-bytes` | Limit total skill guidance added to analysis prompts. |
+| `--skills-sample-files` / `--skills-sample-bytes` | Control how much project context is sampled when generating skills. |
+
+When skills are loaded, SAIST salts its findings cache with the skill content so updated guidance gets a fresh analysis run.
+
+---
+
 
 ## 📄 PDF report generation
 
 saist allows you to generate PDF reports summarizing your findings, making it easier to share insights with your team.
 
-To create a PDF report, simply use the `--pdf` flag when running the scan. By default, the report will be saved to
+To create a PDF report, use the `--pdf` flag when running the scan. By default, the report will be saved to
 `reporting/report.pdf`. You can customize the filename by using the `--pdf-filename` option followed by your desired
 filename.
 
 To add a project name onto the title page of the PDF report, use the `--project-name` option followed by your desired title.
 
-> It is recommended to use the provided Docker image for generating PDF reports, as it includes the necessary TeX suite,
-which can be quite large. This ensures that all dependencies are met and the report is generated properly.
-
-If not, you need to install latexmk to make it work.
+PDF reports are generated with the built-in ReportLab renderer, so no external document-rendering toolchain is required.
 
 ### 🐋 Example (Docker)
 
@@ -169,12 +201,22 @@ docker run -v$PWD/code:/code -v$PWD/reporting:/app/reporting punksecurity/saist 
 
 | Option | Description |
 |:------|:------------|
-| `--llm` | Select LLM (`anthropic`, `deepseek`, `gemini`, `ollama`, `openai`) |
+| `--llm` | Select LLM (`anthropic`, `azure-foundry`, `bedrock`, `deepseek`, `gemini`, `ollama`, `openai`) |
 | `--llm-api-key` | API key for your LLM |
 | `--llm-model` | (Optional) Specific model (e.g., `gpt-4o`) |
+| `--thinking` | Pydantic AI thinking effort: `minimal`, `low`, `medium`, `high`, `xhigh`, or `disabled` |
+| `--openai-base-uri` | Base URI for OpenAI-compatible services. Can also be set with `SAIST_OPENAI_BASE_URI`. |
+| `--azure-openai-endpoint` | Azure AI Foundry or Azure OpenAI endpoint. Can also be set with `AZURE_OPENAI_ENDPOINT`; `/openai/v1/` endpoints use the Responses API without `api-version`. |
+| `--azure-openai-api-version` | Azure OpenAI API version for non-v1 endpoints. Can also be set with `OPENAI_API_VERSION`. |
 | `--interactive` | Chat with the LLM after scan |
 | `--web` | Launch a local web server |
 | `--disable-tools` | Disable tool use during file analysis to reduce LLM token usage |
+| `--deep` | For filesystem scans, analyze every file individually. Without this, filesystem scans send a file inventory and let the LLM inspect files with tools, then report file coverage. |
+| `--iterations` | Number of tool-driven filesystem scan passes to run when `--deep` is not set. Defaults to `1`; concurrency is capped by `--llm-rate-limit`. |
+| `--skills-path` | Folder containing SAIST analysis skill Markdown files |
+| `--generate-skills` | Generate SAIST analysis skill files and exit |
+| `--overwrite-skills` | Replace existing skill files during skill generation |
+| `--disable-skills` | Do not load skill files during analysis |
 | `--disable-caching` | Disable finding caching during file analysis |
 | `--skip-line-length-check` | Skip checking files for a maximum line length |
 | `--max-line-length` | Maximum allowed line length, files with lines longer than this value will be skipped |

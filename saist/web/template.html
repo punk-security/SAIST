@@ -2,515 +2,1175 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SAIST - Findings</title>
-
-    <!-- Tailwind CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-
-    <!-- AG Grid Stylesheets -->
-    <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-quartz.css">-->
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
-
     <style>
+      :root {
+        --bg: #101927;
+        --panel: #172235;
+        --panel-soft: #1d2b42;
+        --line: #2c3b52;
+        --text: #ddeef2;
+        --muted: #9fb2c0;
+        --blue: #5bbfcf;
+        --purple: #a25dce;
+        --orange: #ce985d;
+        --green: #87ce5d;
+        --red: #ce5d5d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       html,
       body {
         width: 100%;
         height: 100%;
-        padding: 0px;
-        margin: 0px;
-        font-family: "Exo 2", sans-serif;
-        font-size: 1rem;
-        text-decoration: none;
-        color: white;
-        background-color: #242930;
-        display: block;
-        scrollbar-color: #c5c6c7 #242930;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 18% 0%, rgba(91, 191, 207, 0.16), transparent 28rem),
+          linear-gradient(180deg, #0c1726 0%, var(--bg) 42%, #0e1520 100%);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
-      /* display: flex;*/
 
-      p {
-        color: #f39b20;
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+
+      .page {
+        min-height: 100%;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: end;
+        padding: 24px;
+        background: rgba(23, 34, 53, 0.94);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .topbar::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background-image: linear-gradient(to right, var(--blue), var(--purple), var(--orange), var(--green), var(--red));
+      }
+
+      .brand {
+        margin: 0 0 8px;
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 34px;
+        line-height: 1.1;
+        font-weight: 800;
+      }
+
+      .subtitle {
+        margin: 10px 0 0;
+        max-width: 820px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        min-width: 128px;
+        padding: 14px;
+        background: rgba(12, 23, 38, 0.72);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .toolbar,
+      .actionbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 16px;
+        background: rgba(23, 34, 53, 0.94);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .toolbar-group,
+      .action-group {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .input,
+      .select {
+        height: 38px;
+        color: var(--text);
+        background: #0d1725;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 12px;
+        outline: none;
+      }
+
+      .input {
+        width: min(360px, 45vw);
+      }
+
+      .input:focus,
+      .select:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(91, 191, 207, 0.14);
       }
 
       .button {
-        padding: 0.5rem 1rem;
-        border: 1px solid;
-        border-color: #c5c6c7;
-        border-radius: 0;
-        color: black;
-        background-color: transparent;
-        transition: all .3s ease-in 0s;
-        display: inline-block;
-        font-size: 0.9rem;
-        font-family: "Exo 2", sans-serif;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--text);
+        background: #0d1725;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 12px;
+        cursor: pointer;
+        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
       }
 
       .button:hover {
-        background-color: #2da84d;
+        background: #142238;
+        border-color: var(--blue);
       }
 
-
-      code {
-        color: white;
-        font-family: monospace;
-        color: black;
+      .button.primary {
+        color: #08131f;
+        background: var(--green);
+        border-color: var(--green);
+        font-weight: 800;
       }
 
-      #body-container {
-        display: flex;
-        flex-direction: column;
-        padding: 80px;
-        max-height: 100%;
+      .button.warn {
+        border-color: rgba(206, 93, 93, 0.72);
+        color: #ffb8b8;
       }
 
-      #header-container {
-        background-color: #1d2024;
-        padding: 20px;
-        margin-bottom: 10px;
-        flex-grow: 7;
-        display: flex;
-        flex-direction: column;
-        border: 2px solid transparent;
-        border-top: none;
-        border-left: none;
-        border-right: none;
-        border-image: linear-gradient(to right, red, orange, yellow, green, blue, purple) 1;
+      .selected-text {
+        color: var(--muted);
+        font-size: 13px;
       }
 
-      #header-spacer {
-        flex-grow: 3;
-        display: block;
-      }
-
-      #container {
-        flex-grow: 9.5;
-        max-height: 70vh;
-        min-height: 40vh;
-        display: flex;
-        flex-direction: row;
+      .content {
+        flex: 1;
+        min-height: 480px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 14px;
       }
 
       #myGrid {
-        flex-grow: 7;
-        background-color: #1d2024;
-        height: 80vh;
-        width: 100vw;
-        max-width: 100vw;
-        display: block;
+        min-height: 480px;
+        height: calc(100vh - 286px);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
       }
 
-      .spacer {
-        width: 2rem;
+      .filter-panel {
+        min-height: 480px;
+        height: calc(100vh - 286px);
+        overflow: auto;
+        padding: 16px;
+        background: rgba(23, 34, 53, 0.94);
+        border: 1px solid var(--line);
+        border-radius: 8px;
       }
 
-      #filter-panel {
-        flex-grow: 3;
+      .filter-panel h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .filter-panel h3 {
+        margin: 20px 0 8px;
+        color: var(--orange);
+        font-size: 13px;
+        text-transform: uppercase;
+      }
+
+      .panel-section {
+        padding-top: 2px;
+      }
+
+      .panel-divider {
+        height: 1px;
+        margin: 20px 0 4px;
+        background: var(--line);
+      }
+
+      .column-toggle {
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        gap: 9px;
+        align-items: start;
+        margin: 0 0 9px;
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.25;
+        cursor: pointer;
+      }
+
+      .column-toggle input {
+        width: 14px;
+        height: 14px;
+        margin: 1px 0 0;
+        accent-color: var(--green);
+      }
+
+      .filterlink {
         display: block;
-        background-color: #1d2024;
-        margin-left: 10px;
-        padding: 15px;
-        max-width: 100%;
-        max-height: 100%;
-        overflow-y: scroll;
+        margin: 0 0 7px;
+        color: var(--text);
+        text-decoration: none;
+        overflow-wrap: anywhere;
+        font-size: 13px;
+      }
+
+      .filterlink:hover,
+      .activefilterlink {
+        color: var(--blue);
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 94px;
+        height: 24px;
+        padding: 0 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .status-new { color: var(--blue); background: rgba(91, 191, 207, 0.14); }
+      .status-confirmed { color: var(--green); background: rgba(135, 206, 93, 0.14); }
+      .status-false-positive { color: var(--red); background: rgba(206, 93, 93, 0.14); }
+      .status-investigating { color: var(--orange); background: rgba(206, 152, 93, 0.14); }
+
+      .severity {
+        font-weight: 800;
+      }
+
+      .sev-critical,
+      .sev-high {
+        color: #ff8e8e;
+      }
+
+      .sev-medium {
+        color: var(--orange);
+      }
+
+      .sev-low {
+        color: var(--blue);
       }
 
       .snippet-style {
-        color: #f8f8f2;
-        background: #2b2b2b;
+        color: #dff7ff;
+        background: #0d1725;
+        border: 1px solid #26374f;
+        border-radius: 6px;
+        padding: 8px;
+        cursor: pointer;
         overflow: hidden;
         text-overflow: ellipsis;
-        overflow-x: initial;
         overflow-wrap: break-word;
         white-space: pre-wrap;
-        line-height: 1.5rem;
-        max-height: 4rem;
+        line-height: 1.35;
+        max-height: 58px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;  
+        -webkit-box-orient: vertical;
       }
 
-      #snippet-model-window {
-        background-color: #242930;
+      .snippet-style:hover {
+        border-color: var(--blue);
       }
 
-      code {
-        color: white;
-        font-family: monospace;
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+        background: rgba(4, 9, 16, 0.74);
+        z-index: 50;
       }
 
-      br {
-        content: "";
-        display: block;
-        height: 5px;
+      .modal.open {
+        display: flex;
       }
 
-      .filterlink,
-      .filterlink:active,
-      .filterlink:visited {
-        font-size: 1rem;
-        color: white;
-        text-decoration: underline;
-        font-weight: bold;
-        margin-top: 3px;
+      .modal-window {
+        width: min(1120px, 100%);
+        max-height: 84vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
       }
 
-      .activefilterlink {
-        color: royalblue !important;
+      .modal-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
       }
 
-      .celllink,
-      .celllink:active,
-      .celllink:visited {
-        color: white;
-        text-decoration: underline;
+      .modal-head h3 {
+        margin: 0;
+        font-size: 18px;
       }
 
+      .modal-title-block {
+        min-width: 0;
+      }
+
+      .modal-title-block h3 {
+        overflow-wrap: anywhere;
+      }
+
+      .modal-meta {
+        margin-top: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .modal-body {
+        overflow: auto;
+        padding: 16px;
+        background: #0b1320;
+      }
+
+      .finding-summary {
+        display: grid;
+        gap: 14px;
+      }
+
+      .finding-section {
+        padding: 16px;
+        background: rgba(23, 34, 53, 0.78);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .finding-section h4,
+      .code-disclosure summary {
+        margin: 0 0 9px;
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .finding-section p {
+        margin: 0;
+        color: var(--text);
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+      }
+
+      .validation-list {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      .validation-list li + li {
+        margin-top: 7px;
+      }
+
+      .code-disclosure {
+        background: rgba(13, 23, 37, 0.9);
+      }
+
+      .code-disclosure summary {
+        margin: 0;
+        cursor: pointer;
+      }
+
+      .code-disclosure[open] summary {
+        margin-bottom: 12px;
+      }
+
+      .code-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .code-table .line-no {
+        width: 64px;
+        color: #70849a;
+        text-align: right;
+        padding: 2px 12px 2px 4px;
+        user-select: none;
+        vertical-align: top;
+      }
+
+      .code-table .line-code {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        padding: 2px 4px;
+        color: #dff7ff;
+        vertical-align: top;
+      }
+
+      .code-table tr.highlight {
+        background: rgba(135, 206, 93, 0.16);
+      }
+
+      .contextmenu {
+        position: absolute;
+        z-index: 80;
+        min-width: 190px;
+        background: #0d1725;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+        overflow: hidden;
+      }
+
+      .contextmenu ul {
+        margin: 0;
+        padding: 6px;
+        list-style: none;
+      }
+
+      .contextmenu li {
+        padding: 9px 10px;
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .contextmenu li:hover {
+        background: var(--panel-soft);
+      }
+
+      .ag-root-wrapper,
+      .ag-theme-quartz {
+        --ag-background-color: #111b29;
+        --ag-foreground-color: #ddeef2;
+        --ag-header-background-color: #172235;
+        --ag-header-foreground-color: #87ce5d;
+        --ag-odd-row-background-color: #162134;
+        --ag-row-hover-color: #1d2b42;
+        --ag-border-color: #2c3b52;
+        --ag-secondary-border-color: #2c3b52;
+        --ag-font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        --ag-row-height: 64px;
+        --ag-header-height: 44px;
+      }
+
+      @media (max-width: 980px) {
+        .topbar {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .content {
+          grid-template-columns: 1fr;
+        }
+
+        .filter-panel,
+        #myGrid {
+          height: auto;
+          min-height: 420px;
+        }
+      }
     </style>
-
   </head>
   <body>
+    <main class="page">
+      <section class="topbar">
+        <div>
+          <p class="brand">Punk Security</p>
+          <h1>SAIST Findings</h1>
+          <p class="subtitle">AI generated code review findings with validation steps, affected code, and local triage status. Status changes are stored in this browser.</p>
+        </div>
+        <div class="metrics">
+          <div class="metric"><span>Total</span><strong id="metric-total">0</strong></div>
+          <div class="metric"><span>Open</span><strong id="metric-open">0</strong></div>
+          <div class="metric"><span>False positives</span><strong id="metric-fp">0</strong></div>
+        </div>
+      </section>
 
-    <div id="body-container">
-      <!-- Findings table -->
-      <div id="header-container">
-        <h1 class="text-3xl font-bold mb-6">SAIST - Findings</h1>
-        <h3>You can save this page locally for later using "Right Click + Save As..."</h3>
-      </div>
-      
-      <div id="container">
-        <div id="myGrid"></div>
-        <!--
-        <div class="spacer"></div>
+      <section class="toolbar">
+        <div class="toolbar-group">
+          <input id="searchbar" class="input" onkeyup="onSearchBoxChange()" type="text" placeholder="Search findings" />
+          <button type="button" class="button" onclick="ResetFilters()">Clear filters</button>
+          <button type="button" class="button" onclick="exportCSV()">Export CSV</button>
+          <label for="fileUpload" class="button">Import CSV</label>
+          <input type="file" id="fileUpload" style="display: none" onchange="importCSV(this)" />
+        </div>
+        <div class="toolbar-group">
+          <button type="button" class="button warn" onclick="resetFPList()">Reset false positives</button>
+        </div>
+      </section>
 
-        <div id="filter-panel">
-          <h3>Filter</h3>
-          <button style="margin: 5px 0 15px 0;" class="button" onclick="ResetFilters()">Clear All
-              Filters</button><br>
+      <section class="actionbar">
+        <div class="action-group">
+          <select id="actionDropDown" class="select">
+            <option value="Confirmed">Mark as Confirmed</option>
+            <option value="False Positive">Mark as False Positive</option>
+            <option value="Investigating">Mark as Investigating</option>
+            <option value="New">Mark as New</option>
+          </select>
+          <button type="button" class="button primary" onclick="onActionButtonClick()">Apply</button>
+          <span id="selectedText" class="selected-text">0 selected</span>
+        </div>
+        <span class="selected-text">Tip: right-click a cell to filter, copy, or mark a row.</span>
+      </section>
+
+      <section class="content">
+        <div id="myGrid" class="ag-theme-quartz"></div>
+        <aside class="filter-panel">
+          <h2>Columns</h2>
+          <div id="column-panel-content" class="panel-section"></div>
+          <div class="panel-divider"></div>
+          <h2>Filters</h2>
           <div id="filter-panel-content"></div>
+        </aside>
+      </section>
+    </main>
+
+    <div id="snippetModal" class="modal">
+      <div class="modal-window">
+        <div class="modal-head">
+          <div class="modal-title-block">
+            <h3 id="modalTitle">Finding</h3>
+            <div id="modalMeta" class="modal-meta"></div>
+          </div>
+          <button class="button" onclick="closeModal()">Close</button>
         </div>
-      -->
+        <div class="modal-body">
+          <div id="modalContent"></div>
+        </div>
       </div>
-      
     </div>
 
-    <!-- Modal -->
-    <div id="snippetModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-      <div id="snippet-model-window" class="rounded-lg w-full max-w-4xl max-h-[80vh] relative flex flex-col">
-        
-        <!-- Header -->
-        <div class="p-4 border-b border-gray-200 flex justify-between items-start">
-          <h3 class="text-xl font-semibold">File Contents</h3>
-          <button class="text-2xl text-gray-500 hover:text-gray-800" onclick="closeModal()">&times;</button>
-        </div>
-    
-        <!-- Scrollable content area -->
-        <div class="overflow-y-auto p-4 bg-gray-800 text-sm " style="max-height: 60vh;">
-          <pre id="modalContent" class="overflow-x-auto"></pre>
-        </div>
-      </div>
-    </div>
-    
     <script>
-      class CustomTooltip  {
+      const rawFindings = {{ findings | tojson }};
+      const overlayKey = "saistFindingStatusOverlay";
+      const storedOverlay = window.localStorage.getItem(overlayKey);
+      let rowDataOverlay = storedOverlay ? JSON.parse(storedOverlay) : {};
+
+      function keyOfRow(row) {
+        return `${row.file}|${row.line_number}|${row.cwe}|${row.title}`;
+      }
+
+      function severityFromPriority(priority) {
+        if (priority > 8) return "Critical";
+        if (priority > 7) return "High";
+        if (priority > 4) return "Medium";
+        return "Low";
+      }
+
+      let rowData = rawFindings.map((item, index) => {
+        const row = {
+          index,
+          file: item.file || "",
+          title: item.title || "",
+          issue: item.issue || "",
+          snippet: item.snippet || "",
+          recommendation: item.recommendation || "",
+          validation_steps: (item.validation_steps || []).join("\\n"),
+          cwe: item.cwe || "",
+          priority: item.priority || 0,
+          severity: severityFromPriority(item.priority || 0),
+          line_number: item.line_number || 0,
+          file_contents: item.file_contents || "",
+          status: item.status || "New"
+        };
+        row.status = rowDataOverlay[keyOfRow(row)] || row.status;
+        return row;
+      });
+
+      class StatusRenderer {
         init(params) {
-          this.eGui = (this.eGui = document.createElement('div'));
-          const color = '#999';
-
-          this.eGui.classList.add('custom-tooltip');
-          this.eGui.style['background-color'] = grey;
-          this.eGui.innerHTML = `
-              <div><b>Custom Tooltip</b></div>
-              <div>${params.value}</div>
-          `;
+          this.eGui = document.createElement("span");
+          this.eGui.className = `status-pill ${statusClass(params.value)}`;
+          this.eGui.innerText = params.value || "New";
         }
-
-        getGui() {
-          return this.eGui;
+        getGui() { return this.eGui; }
+        refresh(params) {
+          this.eGui.className = `status-pill ${statusClass(params.value)}`;
+          this.eGui.innerText = params.value || "New";
+          return true;
         }
       }
 
-      enrichedRaw = {{ findings | tojson }}; // Assuming Jinja renders safely
-      x = 0;
-      rowData = enrichedRaw.map(item => ({
-        index: x++,
-        file: item.file,
-        issue: item.issue,
-        snippet: item.snippet,
-        recommendation: item.recommendation,
-        cwe: item.cwe,
-        priority: item.priority,
-        line_number: item.line_number,
-        file_contents: item.file_contents
-      }));
+      class SeverityRenderer {
+        init(params) {
+          this.eGui = document.createElement("span");
+          this.eGui.className = `severity sev-${String(params.value).toLowerCase()}`;
+          this.eGui.innerText = params.value;
+        }
+        getGui() { return this.eGui; }
+        refresh(params) {
+          this.eGui.className = `severity sev-${String(params.value).toLowerCase()}`;
+          this.eGui.innerText = params.value;
+          return true;
+        }
+      }
+
+      class StatusEditor {
+        init(params) {
+          this.params = params;
+          this.input = document.createElement("select");
+          this.input.className = "select";
+          ["New", "Confirmed", "False Positive", "Investigating"].forEach(choice => {
+            const opt = document.createElement("option");
+            opt.value = choice;
+            opt.text = choice;
+            this.input.appendChild(opt);
+          });
+          this.input.value = params.value || "New";
+        }
+        getGui() { return this.input; }
+        getValue() {
+          this.params.node.data.status = this.input.value;
+          rowDataOverlay[keyOfRow(this.params.node.data)] = this.input.value;
+          persistOverlay();
+          return this.input.value;
+        }
+        afterGuiAttached() { this.input.focus(); }
+      }
 
       class SnippetRenderer {
         init(params) {
-          this.eGui = document.createElement('div');
-          this.eGui.innerHTML = `
-              <div class="snippet-style font-mono text-sm bg-gray-100 border border-gray-300 p-2 rounded cursor-pointer hover:bg-gray-800" onclick="openModal('${params.node.data['index']}')"></div>
-          `
-          this.eGui.querySelector('div').innerText = params.value;
+          this.eGui = document.createElement("div");
+          this.eGui.className = "snippet-style";
+          this.eGui.innerText = params.value || "";
+          this.eGui.onclick = () => openModal(params.node.data.index);
         }
-
-        getGui() {
-          return this.eGui;
-        }
-
+        getGui() { return this.eGui; }
         refresh(params) {
-          this.eGui = document.createElement('div');
-          this.eGui.innerHTML = `
-              <div class="snippet-style font-mono text-sm bg-gray-100 border border-gray-300 p-2 rounded cursor-pointer hover:bg-gray-800" onclick='openModal('${btoa(params.node.data['file_contents'])}')'></div>
-          `
-          this.eGui.querySelector('div').innerText = params.value;
+          this.eGui.innerText = params.value || "";
+          this.eGui.onclick = () => openModal(params.node.data.index);
+          return true;
         }
+      }
 
-        destroy() { }
+      function statusClass(status) {
+        if (status === "Confirmed") return "status-confirmed";
+        if (status === "False Positive") return "status-false-positive";
+        if (status === "Investigating") return "status-investigating";
+        return "status-new";
       }
 
       const columnDefs = [
-        { 
-          headerName: "File", 
-          field: "file", 
-          sortable: true, 
-          filter: true,
-          flex: 3
-        },
-        { 
-          headerName: "Line", 
-          field: "line_number", 
-          flex: 1  
-        },
-        { 
-          headerName: "Priority", 
-          field: "priority",
-          width: 100,
-          flex: 1 
-        },
-        { 
-          headerName: "Issue", 
-          field: "issue", 
-          tooltipField: "issue",
-          flex: 2
-        },
-        { 
-          headerName: "Recommendation", 
-          field: "recommendation", 
-          tooltipField: "recommendation",
-          flex: 2 
-        },
-        { 
-          headerName: "CWE", 
-          field: "cwe", 
-          width: 100, 
-          flex: 1 
-        },
         {
-          headerName: "Snippet",
-          field: "snippet",
-          autoHeight: true,
-          flex: 8,
-          cellStyle: {  },
-          cellRenderer: SnippetRenderer,
-        }
+          field: "",
+          headerCheckboxSelection: true,
+          checkboxSelection: true,
+          headerCheckboxSelectionFilteredOnly: true,
+          lockPosition: true,
+          maxWidth: 48
+        },
+        { headerName: "Status", field: "status", editable: true, cellEditor: StatusEditor, cellRenderer: StatusRenderer, filter: "agTextColumnFilter", width: 150 },
+        { headerName: "Severity", field: "severity", cellRenderer: SeverityRenderer, filter: "agTextColumnFilter", width: 120 },
+        { headerName: "File", field: "file", filter: "agTextColumnFilter", flex: 2 },
+        { headerName: "Line", field: "line_number", width: 90 },
+        { headerName: "Title", field: "title", filter: "agTextColumnFilter", tooltipField: "title", flex: 2 },
+        { headerName: "Issue", field: "issue", filter: "agTextColumnFilter", tooltipField: "issue", flex: 2, hide: true },
+        { headerName: "Recommendation", field: "recommendation", filter: "agTextColumnFilter", tooltipField: "recommendation", flex: 2 },
+        { headerName: "Validation Steps", field: "validation_steps", filter: "agTextColumnFilter", tooltipField: "validation_steps", flex: 2 },
+        { headerName: "CWE", field: "cwe", filter: "agTextColumnFilter", width: 110, hide: true },
+        { headerName: "Affected Code", field: "snippet", autoHeight: true, flex: 3, cellRenderer: SnippetRenderer }
       ];
 
-      // Set table properties/configurations
       const gridOptions = {
-        theme: agGrid.themeQuartz
-          .withParams({
-            backgroundColor: "black",
-            foregroundColor: "#FFF",
-            headerTextColor: '#be7b1e',
-            headerFontWeight: 600,
-            browserColorScheme: "dark",
-            headerFontSize: 16,
-            headerBackgroundColor: '#1d2024',
-            headerForegroundColor: '#be7b1e',
-            oddRowBackgroundColor: '#1d2024',
-            rowBorderColor: "transparent",
-            columnBorder: false,
+        theme: agGrid.themeQuartz.withParams({
+          backgroundColor: "#111b29",
+          foregroundColor: "#ddeef2",
+          headerBackgroundColor: "#172235",
+          headerTextColor: "#87ce5d",
+          headerFontWeight: 800,
+          headerFontSize: 13,
+          oddRowBackgroundColor: "#162134",
+          rowHoverColor: "#1d2b42",
+          borderColor: "#2c3b52",
+          browserColorScheme: "dark"
         }),
-        suppressCellSelection: true,
-        tooltipInteraction: true,
         columnDefs,
         rowData,
-        defaultColDef: {
-          
-          resizable: true,
-          sortable: true,
-          filter: false,
-          minWidth: 120,
-          flex: 1
-        },
+        rowSelection: "multiple",
+        suppressRowClickSelection: true,
+        suppressContextMenu: true,
+        preventDefaultOnContextMenu: true,
         pagination: true,
         paginationPageSize: 15,
         animateRows: true,
-        //isExternalFilterPresent: true,
-        //doesExternalFilterPass: "doesExternalFilterPass",
-        tooltipShowDelay: 200,
-        tooltipComponent: CustomTooltip,
+        rowHeight: 62,
+        tooltipShowDelay: 250,
+        defaultColDef: {
+          resizable: true,
+          sortable: true,
+          filter: false,
+          minWidth: 110
+        },
+        onFilterChanged: () => {
+          populateFilterPanel();
+          updateMetrics();
+        },
+        onRowSelected: () => updateSelectedText(),
+        onCellValueChanged: (params) => {
+          if (params.colDef.field === "status") {
+            rowDataOverlay[keyOfRow(params.data)] = params.data.status;
+            persistOverlay();
+            populateFilterPanel();
+            updateMetrics();
+          }
+        },
+        onRowClicked: (params) => {
+          if (shouldIgnoreRowOpen(params.event)) return;
+          openModal(params.data.index);
+        },
+        onCellContextMenu: createContextMenu
       };
-
-      // Code block dialogue box
-      function openModal(index) {
-        const pre = document.getElementById('modalContent');
-        fileContents = rowData.find(x => x.index == index)['file_contents'];
-        highlightLine = rowData.find(x => x.index == index)['line_number'];
-
-        const lines = fileContents.split('\n');
-
-        const numberedHtml = `<table class="w-full table-fixed">
-            <tbody>
-            ${lines.map((line, idx) => {
-                td = document.createElement("td");
-                td.classList.add("whitespace-pre-wrap", "break-words");
-                td.innerText = line;
-                const lineNumber = idx + 1;
-                const isHighlight = highlightLine === lineNumber;
-                return `
-                <tr id="line-${lineNumber}" class="${isHighlight ? 'bg-green-500' : ''}">
-                    <td class="pr-4 text-right text-gray-500 align-top select-none" width="5%">${lineNumber}</td>
-                    ${td.outerHTML}
-                </tr>
-                `;
-            }).join('')}
-            </tbody>
-        </table>
-        `;
-
-        const contentDiv = document.getElementById('modalContent');
-        contentDiv.innerHTML = numberedHtml;
-
-        document.getElementById('snippetModal').classList.remove('hidden');
-
-        // Scroll to line after rendering
-        if (highlightLine) {
-          setTimeout(() => {
-            const lineElem = document.getElementById(`line-${highlightLine}`);
-            if (lineElem) {
-              lineElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }, 50);
-        }
-        document.getElementById('snippetModal').classList.remove('hidden');
-      }
-      
-      function closeModal() {
-        document.getElementById('snippetModal').classList.add('hidden');
-      }
 
       let gridApi;
 
-      function ResetFilters() {
-          gridApi.setFilterModel({});
-          gridApi.onFilterChanged();
+      document.addEventListener("DOMContentLoaded", () => {
+        const gridDiv = document.getElementById("myGrid");
+        gridApi = agGrid.createGrid(gridDiv, gridOptions);
+        populateColumnPanel();
+        populateFilterPanel();
+        updateMetrics();
+        updateSelectedText();
+      });
+
+      function persistOverlay() {
+        window.localStorage.setItem(overlayKey, JSON.stringify(rowDataOverlay));
+      }
+
+      function updateSelectedText() {
+        if (!gridApi) return;
+        const selectedRows = gridApi.getSelectedRows ? gridApi.getSelectedRows() : [];
+        document.getElementById("selectedText").innerText = `${selectedRows.length} selected out of ${gridApi.getDisplayedRowCount()} visible`;
+      }
+
+      function updateMetrics() {
+        const total = rowData.length;
+        let falsePositive = 0;
+        let open = 0;
+        rowData.forEach(row => {
+          if (row.status === "False Positive") falsePositive++;
+          if (row.status !== "False Positive" && row.status !== "Confirmed") open++;
+        });
+        document.getElementById("metric-total").innerText = total;
+        document.getElementById("metric-open").innerText = open;
+        document.getElementById("metric-fp").innerText = falsePositive;
+      }
+
+      function applyStatusToRows(rows, status) {
+        rows.forEach(row => {
+          row.status = status;
+          rowDataOverlay[keyOfRow(row)] = status;
+        });
+        persistOverlay();
+        gridApi.applyTransaction({ update: rows });
+        gridApi.refreshCells({ force: true });
+        gridApi.onFilterChanged();
+        populateFilterPanel();
+        updateMetrics();
+      }
+
+      function onActionButtonClick() {
+        const status = document.getElementById("actionDropDown").value;
+        const selectedRows = gridApi.getSelectedRows();
+        applyStatusToRows(selectedRows, status);
+        updateSelectedText();
+      }
+
+      function markRowStatus(row, status) {
+        applyStatusToRows([row], status);
+      }
+
+      function resetFPList() {
+        const updates = [];
+        gridApi.forEachNode(rowNode => {
+          if (rowNode.data.status === "False Positive") {
+            rowNode.data.status = "New";
+            rowDataOverlay[keyOfRow(rowNode.data)] = "New";
+            updates.push(rowNode.data);
+          }
+        });
+        persistOverlay();
+        gridApi.applyTransaction({ update: updates });
+        gridApi.onFilterChanged();
+      }
+
+      function onSearchBoxChange() {
+        const value = document.getElementById("searchbar").value;
+        if (gridApi.setGridOption) {
+          gridApi.setGridOption("quickFilterText", value);
+        } else if (gridApi.setQuickFilter) {
+          gridApi.setQuickFilter(value);
+        }
       }
 
       function setFilterTo(column, value) {
-        let model = gridApi.getFilterModel();
+        const model = gridApi.getFilterModel();
         model[column] = {
-            filterType: "text",
-            type: "equals",
-            filter: value,
+          filterType: "text",
+          type: "equals",
+          filter: value
         };
         gridApi.setFilterModel(model);
         gridApi.onFilterChanged();
       }
 
       function removeFilterFrom(column) {
-        let model = gridApi.getFilterModel();
+        const model = gridApi.getFilterModel();
         delete model[column];
         gridApi.setFilterModel(model);
         gridApi.onFilterChanged();
       }
 
-      function populateFilterPanel(){
-        //let model = gridOptions.api.getFilterModel();
-        let filterPanel = document.getElementById("filter-panel-content");
-        filterPanel.innerHTML = '';
+      function ResetFilters() {
+        gridApi.setFilterModel({});
+        onSearchBoxChange();
+        gridApi.onFilterChanged();
+      }
 
-        let columns = ["file"];
-
-        for (const columnName of columns) {
-          let model = gridApi.getFilterModel();
-          let column = columnDefs.filter(x => x.field == columnName)[0];
-          if (Object.keys(column).indexOf("filter") != -1) {
-            // Collect the 10 most common values from the table
-            let valueCount = {};
-
-            gridApi.forEachNodeAfterFilter(
-              (row, index) => {
-                if (valueCount[row.data[columnName]] == undefined) {
-                  valueCount[row.data[columnName]] = 1;
-                } else {
-                  valueCount[row.data[columnName]]++;
-                }
-              }
-            );
-
-            // Sort the valueCount by the value
-            let keys = Object.keys(valueCount);
-
-            keys.sort((a, b) => {
-                return valueCount[a] - valueCount[b];
-            });
-            keys.reverse();
-
-            let topTen = []
-            for (let i = 0; i < Math.min(keys.length, 10); i++) {
-                topTen.push({ k: keys[i], v: valueCount[keys[i]] });
-            }
-
-            let header = document.createElement("h3");
-            header.innerHTML = `By ${column['headerName'] ? column['headerName'] : columnName}`;
-            filterPanel.appendChild(header);
-
-            // Always add an "All" option that resets the filter state
-            let item = document.createElement("a");
-            item.setAttribute("class", "filterlink");
-            if (model[columnName] == undefined) {
-                item.classList.add("activefilterlink");
-            }
-            item.setAttribute("href", "#");
-            item.innerHTML = `All`;
-            item.setAttribute("id", `${columnName}All`);
-            item.setAttribute("onclick", `removeFilterFrom("${columnName}")`)
-            filterPanel.appendChild(item)
-            filterPanel.appendChild(document.createElement("br"));
-
-            for (const pair of topTen) {
-                let item = document.createElement("a");
-                item.setAttribute("class", "filterlink");
-                if (model[columnName] && model[columnName].filter == pair['k']) {
-                    item.classList.add("activefilterlink");
-                }
-                item.setAttribute("href", "#");
-                item.innerHTML = `${pair['k']} (${pair['v']})`;
-                item.setAttribute("id", `${columnName}${pair['k']}`);
-                item.setAttribute("onclick", `setFilterTo("${columnName}", "${pair['k']}")`)
-                filterPanel.appendChild(item);
-                filterPanel.appendChild(document.createElement("br"));
-            }
-            filterPanel.appendChild(document.createElement("br"));
-          }
+      function setColumnVisible(field, visible) {
+        if (gridApi.setColumnsVisible) {
+          gridApi.setColumnsVisible([field], visible);
+        } else if (gridApi.applyColumnState) {
+          gridApi.applyColumnState({ state: [{ colId: field, hide: !visible }] });
+        } else if (gridApi.columnApi && gridApi.columnApi.setColumnVisible) {
+          gridApi.columnApi.setColumnVisible(field, visible);
         }
       }
-          
-      // Load the table
-      document.addEventListener('DOMContentLoaded', () => {
-        const gridDiv = document.getElementById('myGrid');
-        gridApi = agGrid.createGrid(gridDiv, gridOptions);
-        populateFilterPanel();
-      });
-    
-      // OnClick, open the code block dialogue box 
-      window.onclick = function(event) {
-        const modal = document.getElementById('snippetModal');
-        if (event.target === modal) {
-          closeModal();
+
+      function isColumnVisible(field) {
+        if (gridApi.getColumn) {
+          const column = gridApi.getColumn(field);
+          return column ? column.isVisible() : true;
         }
+        if (gridApi.columnApi && gridApi.columnApi.getColumn) {
+          const column = gridApi.columnApi.getColumn(field);
+          return column ? column.isVisible() : true;
+        }
+        return true;
+      }
+
+      function populateColumnPanel() {
+        const panel = document.getElementById("column-panel-content");
+        panel.innerHTML = "";
+        columnDefs.filter(column => column.field).forEach(column => {
+          const label = document.createElement("label");
+          label.className = "column-toggle";
+
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.checked = isColumnVisible(column.field);
+          input.onchange = () => setColumnVisible(column.field, input.checked);
+
+          const text = document.createElement("span");
+          text.innerText = column.headerName || column.field;
+
+          label.appendChild(input);
+          label.appendChild(text);
+          panel.appendChild(label);
+        });
+      }
+
+      function shouldIgnoreRowOpen(event) {
+        if (!event || !event.target) return false;
+        return Boolean(event.target.closest("button, input, select, label, .ag-selection-checkbox"));
+      }
+
+      function populateFilterPanel() {
+        if (!gridApi) return;
+        updateSelectedText();
+        const model = gridApi.getFilterModel();
+        const filterPanel = document.getElementById("filter-panel-content");
+        filterPanel.innerHTML = "";
+        ["status", "severity", "file", "cwe"].forEach(columnName => {
+          const column = columnDefs.find(x => x.field === columnName);
+          const valueCount = {};
+          gridApi.forEachNodeAfterFilter(row => {
+            const value = row.data[columnName] || "Unknown";
+            valueCount[value] = (valueCount[value] || 0) + 1;
+          });
+          const keys = Object.keys(valueCount).sort((a, b) => valueCount[b] - valueCount[a]).slice(0, 10);
+          const header = document.createElement("h3");
+          header.innerText = `By ${column.headerName || columnName}`;
+          filterPanel.appendChild(header);
+
+          const all = document.createElement("a");
+          all.href = "#";
+          all.className = `filterlink ${model[columnName] ? "" : "activefilterlink"}`;
+          all.innerText = "All";
+          all.onclick = event => {
+            event.preventDefault();
+            removeFilterFrom(columnName);
+          };
+          filterPanel.appendChild(all);
+
+          keys.forEach(key => {
+            const item = document.createElement("a");
+            item.href = "#";
+            item.className = `filterlink ${model[columnName] && model[columnName].filter === key ? "activefilterlink" : ""}`;
+            item.innerText = `${key} (${valueCount[key]})`;
+            item.onclick = event => {
+              event.preventDefault();
+              setFilterTo(columnName, key);
+            };
+            filterPanel.appendChild(item);
+          });
+        });
+      }
+
+      function createContextMenu(params) {
+        if (!params.colDef.field) return;
+        document.querySelectorAll(".contextmenu").forEach(x => x.remove());
+        const contextmenu = document.createElement("div");
+        document.body.appendChild(contextmenu);
+        contextmenu.onmouseleave = () => contextmenu.remove();
+        contextmenu.classList.add("contextmenu");
+        contextmenu.style.left = `${params.event.pageX}px`;
+        contextmenu.style.top = `${params.event.pageY}px`;
+
+        const ul = document.createElement("ul");
+        addMenuItem(ul, "Filter on cell value", () => setFilterTo(params.colDef.field, params.value));
+        addMenuItem(ul, "Reset column filter", () => removeFilterFrom(params.colDef.field));
+        addMenuItem(ul, "Copy cell", () => navigator.clipboard.writeText(params.value || ""));
+        addMenuItem(ul, "Mark row false positive", () => markRowStatus(params.node.data, "False Positive"));
+        addMenuItem(ul, "Mark row confirmed", () => markRowStatus(params.node.data, "Confirmed"));
+        addMenuItem(ul, "Mark row investigating", () => markRowStatus(params.node.data, "Investigating"));
+        contextmenu.appendChild(ul);
+      }
+
+      function addMenuItem(ul, label, action) {
+        const li = document.createElement("li");
+        li.innerText = label;
+        li.onclick = () => {
+          action();
+          document.querySelectorAll(".contextmenu").forEach(x => x.remove());
+        };
+        ul.appendChild(li);
+      }
+
+      function exportCSV() {
+        gridApi.exportDataAsCsv({
+          fileName: "saist-findings.csv",
+          exportedRows: "all",
+          columnKeys: ["status", "severity", "priority", "file", "line_number", "title", "issue", "recommendation", "validation_steps", "cwe", "snippet"],
+          processHeaderCallback: params => params.column.getColDef().field
+        });
+      }
+
+      function parseCSV(csvString) {
+        const rows = [];
+        let row = [];
+        let value = "";
+        let quoted = false;
+        for (let i = 0; i < csvString.length; i++) {
+          const char = csvString[i];
+          const next = csvString[i + 1];
+          if (quoted && char === '"' && next === '"') {
+            value += '"';
+            i++;
+          } else if (char === '"') {
+            quoted = !quoted;
+          } else if (!quoted && char === ",") {
+            row.push(value);
+            value = "";
+          } else if (!quoted && (char === "\n" || char === "\r")) {
+            if (char === "\r" && next === "\n") i++;
+            row.push(value);
+            if (row.some(cell => cell !== "")) rows.push(row);
+            row = [];
+            value = "";
+          } else {
+            value += char;
+          }
+        }
+        row.push(value);
+        if (row.some(cell => cell !== "")) rows.push(row);
+        return rows;
+      }
+
+      function importCSV(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const fileReader = new FileReader();
+        fileReader.readAsText(file);
+        fileReader.onload = event => {
+          const table = parseCSV(event.target.result);
+          const headers = table.shift() || [];
+          const statusIndex = headers.indexOf("status");
+          const keyIndexes = ["file", "line_number", "cwe", "title"].map(header => headers.indexOf(header));
+          if (statusIndex < 0 || keyIndexes.some(index => index < 0)) return;
+
+          const imported = {};
+          table.forEach(row => {
+            const key = `${row[keyIndexes[0]]}|${row[keyIndexes[1]]}|${row[keyIndexes[2]]}|${row[keyIndexes[3]]}`;
+            imported[key] = row[statusIndex];
+          });
+
+          const updates = [];
+          gridApi.forEachNode(node => {
+            const key = keyOfRow(node.data);
+            if (imported[key]) {
+              node.data.status = imported[key];
+              rowDataOverlay[key] = imported[key];
+              updates.push(node.data);
+            }
+          });
+          persistOverlay();
+          gridApi.applyTransaction({ update: updates });
+          gridApi.onFilterChanged();
+          input.value = "";
+        };
+      }
+
+      function escapeHtml(value) {
+        const element = document.createElement("div");
+        element.innerText = value || "";
+        return element.innerHTML;
+      }
+
+      function renderValidationSteps(row) {
+        const steps = String(row.validation_steps || "")
+          .split("\n")
+          .map(step => step.trim())
+          .filter(Boolean);
+        if (!steps.length) return "<p>No validation steps supplied.</p>";
+        return `<ol class="validation-list">${steps.map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`;
+      }
+
+      function renderAffectedCode(row) {
+        const lines = (row.file_contents || row.snippet || "").split("\n");
+        return `<table class="code-table"><tbody>${lines.map((line, idx) => {
+          const lineNumber = idx + 1;
+          const isHighlight = row.line_number === lineNumber;
+          return `<tr id="line-${lineNumber}" class="${isHighlight ? "highlight" : ""}">
+            <td class="line-no">${lineNumber}</td>
+            <td class="line-code">${escapeHtml(line)}</td>
+          </tr>`;
+        }).join("")}</tbody></table>`;
+      }
+
+      function openModal(index) {
+        const row = rowData.find(x => x.index === index);
+        if (!row) return;
+        const modalTitle = document.getElementById("modalTitle");
+        modalTitle.innerText = row.title || "Finding";
+        document.getElementById("modalMeta").innerHTML = `
+          <span>${escapeHtml(row.severity)}</span>
+          <span>${escapeHtml(row.status)}</span>
+          <span>${escapeHtml(row.file)}:${escapeHtml(String(row.line_number))}</span>
+          <span>${escapeHtml(row.cwe)}</span>
+        `;
+
+        document.getElementById("modalContent").innerHTML = `
+          <div class="finding-summary">
+            <section class="finding-section">
+              <h4>Issue</h4>
+              <p>${escapeHtml(row.issue)}</p>
+            </section>
+            <section class="finding-section">
+              <h4>Recommendation</h4>
+              <p>${escapeHtml(row.recommendation)}</p>
+            </section>
+            <section class="finding-section">
+              <h4>Validation Steps</h4>
+              ${renderValidationSteps(row)}
+            </section>
+            <details class="finding-section code-disclosure">
+              <summary>Affected Code</summary>
+              ${renderAffectedCode(row)}
+            </details>
+          </div>
+        `;
+        document.getElementById("snippetModal").classList.add("open");
+        setTimeout(() => {
+          const lineElem = document.getElementById(`line-${row.line_number}`);
+          if (lineElem) lineElem.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 40);
+      }
+
+      function closeModal() {
+        document.getElementById("snippetModal").classList.remove("open");
+      }
+
+      window.onclick = event => {
+        const modal = document.getElementById("snippetModal");
+        if (event.target === modal) closeModal();
       };
     </script>
   </body>
