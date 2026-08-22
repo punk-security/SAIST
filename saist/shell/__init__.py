@@ -1,4 +1,4 @@
-from llm.adapters import BaseLlmAdapter
+#from llm.adapters import BaseLlmAdapter
 from models import Finding
 from scm import Scm
 from scm.adapters import BaseScmAdapter
@@ -29,7 +29,7 @@ class Shell():
     If the user wishes, you can reset findings back to how they were at the start, and use a tool to clear chat context
     When asked to show findings, always display findings in a markdown table. paginate to 10 findings at a time
     """
-    def __init__(self, llm: BaseLlmAdapter, scm: Scm, findings: list[Finding]):
+    def __init__(self, llm: "Any", scm: Scm, findings: list[Finding]):
         self.llm = llm
         self.scm = scm
         self.findings = findings

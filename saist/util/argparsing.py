@@ -2,7 +2,7 @@ import argparse
 from os import linesep, environ, cpu_count
 import sys
 from dotenv import load_dotenv
-from llm.adapters import THINKING_CHOICES
+#from llm.adapters import THINKING_CHOICES
 from util.skills import DEFAULT_SKILL_MAX_BYTES, DEFAULT_SKILL_SAMPLE_BYTES, DEFAULT_SKILL_SAMPLE_FILES, DEFAULT_SKILLS_PATH
 
 load_dotenv(".env")
@@ -153,15 +153,15 @@ parser.add_argument(
     default=1,
 )
 
-parser.add_argument(
-    "--thinking",
-    help="LLM thinking effort for providers supported by pydantic-ai",
-    choices=THINKING_CHOICES,
-    envvar="SAIST_THINKING",
-    action=EnvDefault,
-    required=False,
-    default="medium",
-)
+#parser.add_argument(
+#    "--thinking",
+#    help="LLM thinking effort for providers supported by pydantic-ai",
+#    choices=THINKING_CHOICES,
+#    envvar="SAIST_THINKING",
+#    action=EnvDefault,
+#    required=False,
+#    default="medium",
+#)
 
 parser.add_argument(
     "--ollama-base-uri", type=str, help = "Base uri of ollama",
@@ -198,6 +198,11 @@ parser.add_argument(
 
 parser.add_argument(
     "--disable-tools", help="Disable usage of tools during code analysis (this is a good cost saving)",
+    required=False, action="store_true"
+    )
+
+parser.add_argument(
+    "--disable-progress", help="Disables the progress bar output - useful when debugging",
     required=False, action="store_true"
     )
 

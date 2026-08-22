@@ -9,3 +9,6 @@ flask==3.1.1
 ollama==0.5.1
 gitignore-parser==0.1.13
 reportlab==4.5.0
+openai==2.52.0
+anthropic==0.120.2
+google-genai==2.16.0

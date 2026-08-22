@@ -5,7 +5,6 @@ import logging
 import os
 import textwrap
 
-from llm.adapters import BaseLlmAdapter
 from models import FindingContext
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -95,7 +94,7 @@ class SaistDocTemplate(SimpleDocTemplate):
 class ReportLabPdf:
     _DEFAULT_OUTPUT_DIR = "reporting"
 
-    llm: BaseLlmAdapter
+    llm: "Any"
     project: str
     findings: list[FindingContext]
     comment: str
